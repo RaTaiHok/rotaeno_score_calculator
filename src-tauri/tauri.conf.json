@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Rotaeno 分数计算器",
+  "version": "0.1.0",
+  "identifier": "com.example.rotaeno-score-calc",
+  "build": {
+    "beforeDevCommand": "npm --prefix ../frontend run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm --prefix ../frontend run build",
+    "frontendDist": "../frontend/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Rotaeno 分数计算器",
+        "width": 980,
+        "height": 760,
+        "minWidth": 900,
+        "minHeight": 700,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false,
+    "targets": "all",
+    "resources": [
+      "../data/all_song_note_stats.json"
+    ]
+  }
+}

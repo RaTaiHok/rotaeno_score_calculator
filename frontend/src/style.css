@@ -1,0 +1,152 @@
+:root {
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  color: #13243b;
+  background-color: #f3f5f9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at 15% 5%, #e1ebf8 0%, #f3f5f9 30%, #f3f5f9 100%);
+}
+
+.container {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+h1 {
+  margin: 0 0 16px;
+  font-size: 30px;
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
+h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.panel {
+  background: #ffffff;
+  border: 1px solid #d7ddea;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+
+.grid-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field span {
+  font-size: 13px;
+  color: #51607a;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.option-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.option-row small {
+  color: #8a97ae;
+}
+
+.info,
+.limit-box {
+  margin-top: 12px;
+  border: 1px solid #d7ddea;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fafcff;
+}
+
+.info p,
+.limit-box p {
+  margin: 5px 0;
+}
+
+.muted {
+  color: #51607a;
+  margin: 0 0 10px;
+}
+
+.warning {
+  margin: 10px 0 0;
+  color: #b45309;
+}
+
+.action-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.target-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 230px;
+}
+
+.target-box span {
+  font-size: 13px;
+  color: #51607a;
+}
+
+.result {
+  margin-top: 14px;
+}
+
+pre {
+  margin: 0;
+  border: 1px solid #d7ddea;
+  border-radius: 8px;
+  background: #f7f9fe;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 56px;
+}
+
+.error {
+  color: #b3261e;
+  min-height: 20px;
+  margin: 10px 0 0;
+}
+
+@media (max-width: 900px) {
+  .grid-two,
+  .grid-three {
+    grid-template-columns: 1fr;
+  }
+}
