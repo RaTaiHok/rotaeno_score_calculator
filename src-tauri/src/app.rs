@@ -1,7 +1,7 @@
 use crate::calc;
 use crate::model::{
-    DifficultyOption, NoteStats, ReverseInput, ReverseResult, ScoreInput, ScoreResult, SongDataFile,
-    SongEntry, SongSummary,
+    DifficultyOption, NoteStats, ReverseInput, ReverseResult, ScoreInput, ScoreResult,
+    SongDataFile, SongEntry, SongSummary,
 };
 use tauri::State;
 
@@ -10,23 +10,18 @@ pub struct AppState {
 }
 
 pub fn load_app_state() -> Result<AppState, String> {
-    let raw = include_str!("../data/all_song_note_stats.json");
+    let raw = include_str!("../../data/all_song_note_stats.json");
     let parsed: SongDataFile =
         serde_json::from_str(raw).map_err(|err| format!("解析谱面JSON失败: {err}"))?;
 
-    Ok(AppState { songs: parsed.songs })
+    Ok(AppState {
+        songs: parsed.songs,
+    })
 }
 
 #[tauri::command]
 pub fn list_songs(state: State<'_, AppState>) -> Vec<SongSummary> {
-    let mut songs: Vec<SongSummary> = state
-        .songs
-        .iter()
-        .map(|song| SongSummary {
-            song_id: song.song_id.clone(),
-            song_name: song.song_name.clone(),
-        })
-        .collect();
+    let mut songs: Vec<SongSummary> = state.songs.iter().map(SongEntry::summary).collect();
 
     songs.sort_by(|a, b| a.song_name.cmp(&b.song_name));
     songs
@@ -43,13 +38,7 @@ pub fn get_song_difficulties(
     let mut options: Vec<DifficultyOption> = song
         .difficulties
         .iter()
-        .map(|(difficulty, stats)| DifficultyOption {
-            difficulty: difficulty.clone(),
-            stats: stats.clone(),
-            non_slide_total: stats.non_slide_total(),
-            effective_notes: stats.effective_notes(),
-            base_score: stats.base_score(),
-        })
+        .map(|(difficulty, stats)| DifficultyOption::from_stats(difficulty, stats))
         .collect();
 
     options.sort_by(|a, b| difficulty_rank(&a.difficulty).cmp(&difficulty_rank(&b.difficulty)));
@@ -74,6 +63,15 @@ pub fn reverse_from_score(
     calc::reverse_from_target(stats, &input)
 }
 
+#[tauri::command]
+pub fn reverse_all_from_score(
+    input: ReverseInput,
+    state: State<'_, AppState>,
+) -> Result<ReverseResult, String> {
+    let stats = find_stats(&state, &input.song_id, &input.difficulty)?;
+    calc::reverse_all_from_target(stats, &input)
+}
+
 fn find_song<'a>(state: &'a AppState, song_id: &str) -> Option<&'a SongEntry> {
     state.songs.iter().find(|song| song.song_id == song_id)
 }
@@ -83,8 +81,8 @@ fn find_stats<'a>(
     song_id: &str,
     difficulty: &str,
 ) -> Result<&'a NoteStats, String> {
-    let song =
-        find_song(state, song_id).ok_or_else(|| format!("未找到歌曲ID: {song_id}，请检查输入。"))?;
+    let song = find_song(state, song_id)
+        .ok_or_else(|| format!("未找到歌曲ID: {song_id}，请检查输入。"))?;
 
     song.difficulties
         .get(difficulty)

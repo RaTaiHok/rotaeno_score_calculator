@@ -313,6 +313,45 @@
       "song_total": 1780
     },
     {
+      "song_id": "a-turtles-heart",
+      "song_name": "A Turtle's Heart",
+      "difficulties": {
+        "I": {
+          "tap": 75,
+          "flick": 0,
+          "slide": 102,
+          "catch": 49,
+          "rotate": 4,
+          "total": 230
+        },
+        "II": {
+          "tap": 175,
+          "flick": 0,
+          "slide": 296,
+          "catch": 141,
+          "rotate": 2,
+          "total": 614
+        },
+        "III": {
+          "tap": 246,
+          "flick": 71,
+          "slide": 364,
+          "catch": 137,
+          "rotate": 10,
+          "total": 828
+        },
+        "IV": {
+          "tap": 324,
+          "flick": 99,
+          "slide": 439,
+          "catch": 272,
+          "rotate": 39,
+          "total": 1173
+        }
+      },
+      "song_total": 2845
+    },
+    {
       "song_id": "all-nighter",
       "song_name": "ALL☆NIGHTER！",
       "difficulties": {
@@ -5343,10 +5382,10 @@
         },
         "IV": {
           "tap": 208,
-          "flick": 199,
+          "flick": 197,
           "slide": 256,
           "catch": 357,
-          "rotate": 54,
+          "rotate": 56,
           "total": 1074
         },
         "IV_Alpha": {
@@ -5515,6 +5554,45 @@
         }
       },
       "song_total": 2926
+    },
+    {
+      "song_id": "imagined-flight",
+      "song_name": "Imagined Flight",
+      "difficulties": {
+        "I": {
+          "tap": 181,
+          "flick": 0,
+          "slide": 259,
+          "catch": 83,
+          "rotate": 14,
+          "total": 537
+        },
+        "II": {
+          "tap": 361,
+          "flick": 0,
+          "slide": 308,
+          "catch": 94,
+          "rotate": 14,
+          "total": 777
+        },
+        "III": {
+          "tap": 473,
+          "flick": 63,
+          "slide": 454,
+          "catch": 295,
+          "rotate": 16,
+          "total": 1301
+        },
+        "IV": {
+          "tap": 764,
+          "flick": 134,
+          "slide": 657,
+          "catch": 696,
+          "rotate": 17,
+          "total": 2268
+        }
+      },
+      "song_total": 4883
     },
     {
       "song_id": "in-a-diabolic-manner",
@@ -8372,6 +8450,45 @@
       "song_total": 2290
     },
     {
+      "song_id": "rtrt",
+      "song_name": "RTRT",
+      "difficulties": {
+        "I": {
+          "tap": 6,
+          "flick": 0,
+          "slide": 178,
+          "catch": 234,
+          "rotate": 3,
+          "total": 421
+        },
+        "II": {
+          "tap": 31,
+          "flick": 0,
+          "slide": 441,
+          "catch": 211,
+          "rotate": 20,
+          "total": 703
+        },
+        "III": {
+          "tap": 257,
+          "flick": 51,
+          "slide": 755,
+          "catch": 103,
+          "rotate": 16,
+          "total": 1182
+        },
+        "IV": {
+          "tap": 420,
+          "flick": 126,
+          "slide": 1079,
+          "catch": 176,
+          "rotate": 41,
+          "total": 1842
+        }
+      },
+      "song_total": 4148
+    },
+    {
       "song_id": "rain",
       "song_name": "Rain",
       "difficulties": {
@@ -9579,6 +9696,53 @@
         }
       },
       "song_total": 3319
+    },
+    {
+      "song_id": "space-colony",
+      "song_name": "Space Colony",
+      "difficulties": {
+        "I": {
+          "tap": 77,
+          "flick": 0,
+          "slide": 400,
+          "catch": 59,
+          "rotate": 17,
+          "total": 553
+        },
+        "II": {
+          "tap": 135,
+          "flick": 0,
+          "slide": 438,
+          "catch": 63,
+          "rotate": 17,
+          "total": 653
+        },
+        "III": {
+          "tap": 334,
+          "flick": 106,
+          "slide": 538,
+          "catch": 107,
+          "rotate": 16,
+          "total": 1101
+        },
+        "IV": {
+          "tap": 351,
+          "flick": 72,
+          "slide": 404,
+          "catch": 222,
+          "rotate": 33,
+          "total": 1082
+        },
+        "IV_Alpha": {
+          "tap": 578,
+          "flick": 115,
+          "slide": 556,
+          "catch": 201,
+          "rotate": 36,
+          "total": 1486
+        }
+      },
+      "song_total": 4875
     },
     {
       "song_id": "spinel",
@@ -11314,6 +11478,45 @@
       "song_total": 3004
     },
     {
+      "song_id": "yubikiri-genman-special",
+      "song_name": "YUBIKIRI-GENMAN -special edit-",
+      "difficulties": {
+        "I": {
+          "tap": 83,
+          "flick": 0,
+          "slide": 135,
+          "catch": 39,
+          "rotate": 3,
+          "total": 260
+        },
+        "II": {
+          "tap": 147,
+          "flick": 0,
+          "slide": 177,
+          "catch": 108,
+          "rotate": 8,
+          "total": 440
+        },
+        "III": {
+          "tap": 285,
+          "flick": 23,
+          "slide": 860,
+          "catch": 30,
+          "rotate": 4,
+          "total": 1202
+        },
+        "IV": {
+          "tap": 468,
+          "flick": 31,
+          "slide": 927,
+          "catch": 127,
+          "rotate": 10,
+          "total": 1563
+        }
+      },
+      "song_total": 3465
+    },
+    {
       "song_id": "you-n-die",
       "song_name": "You & DIE",
       "difficulties": {
@@ -12381,6 +12584,53 @@
         }
       },
       "song_total": 2583
+    },
+    {
+      "song_id": "world-execute-me",
+      "song_name": "world.execute(me);",
+      "difficulties": {
+        "I": {
+          "tap": 152,
+          "flick": 0,
+          "slide": 52,
+          "catch": 32,
+          "rotate": 12,
+          "total": 248
+        },
+        "II": {
+          "tap": 212,
+          "flick": 0,
+          "slide": 93,
+          "catch": 64,
+          "rotate": 40,
+          "total": 409
+        },
+        "III": {
+          "tap": 346,
+          "flick": 136,
+          "slide": 232,
+          "catch": 96,
+          "rotate": 41,
+          "total": 851
+        },
+        "IV": {
+          "tap": 567,
+          "flick": 184,
+          "slide": 876,
+          "catch": 181,
+          "rotate": 45,
+          "total": 1853
+        },
+        "IV_Alpha": {
+          "tap": 440,
+          "flick": 162,
+          "slide": 1328,
+          "catch": 110,
+          "rotate": 45,
+          "total": 2085
+        }
+      },
+      "song_total": 5446
     },
     {
       "song_id": "aventyr",
@@ -14949,6 +15199,45 @@
         }
       },
       "song_total": 6786
+    },
+    {
+      "song_id": "yurusaretakunai-volta-remix",
+      "song_name": "許されたくない (VOLTA Remix)",
+      "difficulties": {
+        "I": {
+          "tap": 33,
+          "flick": 0,
+          "slide": 303,
+          "catch": 160,
+          "rotate": 30,
+          "total": 526
+        },
+        "II": {
+          "tap": 106,
+          "flick": 0,
+          "slide": 300,
+          "catch": 372,
+          "rotate": 29,
+          "total": 807
+        },
+        "III": {
+          "tap": 98,
+          "flick": 123,
+          "slide": 782,
+          "catch": 544,
+          "rotate": 56,
+          "total": 1603
+        },
+        "IV": {
+          "tap": 306,
+          "flick": 283,
+          "slide": 1109,
+          "catch": 706,
+          "rotate": 36,
+          "total": 2440
+        }
+      },
+      "song_total": 5376
     },
     {
       "song_id": "yusui",

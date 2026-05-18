@@ -5,7 +5,7 @@
   "identifier": "com.example.rotaeno-score-calc",
   "build": {
     "beforeDevCommand": "npm --prefix ../frontend run dev",
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://127.0.0.1:5173",
     "beforeBuildCommand": "npm --prefix ../frontend run build",
     "frontendDist": "../frontend/dist"
   },

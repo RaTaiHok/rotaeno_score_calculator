@@ -118,9 +118,28 @@ h3 {
   min-width: 230px;
 }
 
-.target-box span {
+.target-box span,
+.reverse-filter span {
   font-size: 13px;
   color: #51607a;
+}
+
+.reverse-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 360px;
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.reverse-filter small {
+  color: #8a97ae;
+  line-height: 1.5;
 }
 
 .result {
