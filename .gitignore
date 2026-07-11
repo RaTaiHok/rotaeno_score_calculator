@@ -11,4 +11,4 @@
 /.github
 /.github/workflows
 /build_android.sh
-/BUILD.md/data/latest_version.txt
+/BUILD.md
