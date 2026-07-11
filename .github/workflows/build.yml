@@ -170,44 +170,64 @@ jobs:
       - name: Build iOS .app (unsigned)
         run: |
           set -euo pipefail
-          cd src-tauri/gen/apple
 
-          # Find the scheme name (usually the app name)
+          # Tauri 2 puts the Xcode project inside src-tauri/gen/apple/ at
+          # varying depths — locate it first.
+          PROJECT_DIR=$(find src-tauri/gen/apple -name "*.xcodeproj" -maxdepth 5 -type d 2>/dev/null | head -1)
+          WORKSPACE_DIR=$(find src-tauri/gen/apple -name "*.xcworkspace" -maxdepth 5 -type d 2>/dev/null | head -1)
+
+          echo "=== Directory tree ==="
+          find src-tauri/gen/apple -maxdepth 4 -type d 2>/dev/null || true
+
+          if [ -n "$WORKSPACE_DIR" ]; then
+            PROJ_DIR=$(dirname "$WORKSPACE_DIR")
+            WORKSPACE_NAME=$(basename "$WORKSPACE_DIR")
+            echo "Using workspace: $WORKSPACE_DIR"
+          elif [ -n "$PROJECT_DIR" ]; then
+            PROJ_DIR=$(dirname "$PROJECT_DIR")
+            PROJECT_NAME=$(basename "$PROJECT_DIR")
+            echo "Using project: $PROJECT_DIR"
+          else
+            echo "❌ No .xcodeproj or .xcworkspace found!"
+            find src-tauri/gen/apple -type d | head -30
+            exit 1
+          fi
+
+          cd "$PROJ_DIR"
+
+          # Detect scheme
           SCHEME=$(xcodebuild -list -json 2>/dev/null | python3 -c "
           import json,sys
           data=json.load(sys.stdin)
-          # prefer workspace schemes, fall back to project schemes
           ws = data.get('workspace',{}).get('schemes',[])
           pj = data.get('project',{}).get('schemes',[])
           schemes = ws or pj
-          print(schemes[0] if schemes else 'rotaeno_score_calc')
-          " 2>/dev/null || echo "rotaeno_score_calc")
+          print(schemes[0])
+          " 2>/dev/null)
           echo "Scheme: $SCHEME"
 
-          # Detect workspace or project
-          if ls *.xcworkspace >/dev/null 2>&1; then
-            WORKSPACE=$(ls *.xcworkspace | head -1)
-            echo "Using workspace: $WORKSPACE"
+          # Use an absolute derivedDataPath so later steps can find it
+          DERIVED="$PWD/build/ios"
+
+          if [ -n "${WORKSPACE_NAME:-}" ]; then
             xcodebuild \
-              -workspace "$WORKSPACE" \
+              -workspace "$WORKSPACE_NAME" \
               -scheme "$SCHEME" \
               -configuration Release \
               -sdk iphoneos \
-              -derivedDataPath ./build/ios \
+              -derivedDataPath "$DERIVED" \
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGNING_REQUIRED=NO \
               CODE_SIGN_IDENTITY="" \
               PROVISIONING_PROFILE_SPECIFIER="" \
               -destination 'generic/platform=iOS'
           else
-            XCODEPROJ=$(ls *.xcodeproj | head -1)
-            echo "Using project: $XCODEPROJ"
             xcodebuild \
-              -project "$XCODEPROJ" \
+              -project "$PROJECT_NAME" \
               -scheme "$SCHEME" \
               -configuration Release \
               -sdk iphoneos \
-              -derivedDataPath ./build/ios \
+              -derivedDataPath "$DERIVED" \
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGNING_REQUIRED=NO \
               CODE_SIGN_IDENTITY="" \
@@ -215,17 +235,21 @@ jobs:
               -destination 'generic/platform=iOS'
           fi
 
+          # Save path for next step
+          echo "DERIVED_DATA=$DERIVED" >> "$GITHUB_ENV"
+
       # ---- Locate .app and ad-hoc sign with ldid then package IPA ----
       - name: Package unsigned IPA
         run: |
           set -euo pipefail
-          cd src-tauri/gen/apple
 
-          # Find the built .app
-          APP_PATH=$(find build/ios -name "*.app" -type d -maxdepth 5 | head -1)
+          # Find the built .app in derived data
+          APP_PATH=$(find "${DERIVED_DATA:-src-tauri/gen/apple/build/ios}" -name "*.app" -type d -maxdepth 6 | head -1)
           if [ -z "$APP_PATH" ]; then
             echo "❌ Could not find .app bundle"
-            find build/ios -type d | head -30
+            find "${DERIVED_DATA:-src-tauri/gen/apple/build/ios}" -type d 2>/dev/null | head -30 || true
+            echo "--- Fallback global search ---"
+            find src-tauri/gen/apple -name "*.app" -type d 2>/dev/null | head -10 || true
             exit 1
           fi
           echo "Found app: $APP_PATH"
@@ -252,16 +276,9 @@ jobs:
           zip -r "$IPA_FILE" Payload
           cd -
 
-          # Copy to expected path
-          mkdir -p build/ios/ipa
-          cp "$IPA_FILE" build/ios/ipa/
+          # Copy to a predictable upload path
+          UPLOAD_DIR="src-tauri/gen/apple/build/ios/ipa"
+          mkdir -p "$UPLOAD_DIR"
+          cp "$IPA_FILE" "$UPLOAD_DIR/"
 
-          echo "✅ IPA created: build/ios/ipa/${APP_NAME}.ipa"
-
-      # ---- Upload artifact ----
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: iOS-IPA-unsigned
-          path: src-tauri/gen/apple/build/ios/ipa/*.ipa
-          if-no-files-found: error
+          echo "✅ IPA created: $UPLOAD_DIR/${APP_NAME}.ipa"
