@@ -8,7 +8,6 @@
 /frontend/package-lock.json
 /src-tauri/icons
 /src-tauri/nekoRTHsama.jks
-/.github
-/.github/workflows
 /build_android.sh
 /BUILD.md
+/.github/java-upgrade

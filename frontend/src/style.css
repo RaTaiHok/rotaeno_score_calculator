@@ -20,6 +20,22 @@
   box-sizing: border-box;
 }
 
+/* Hide scrollbars globally — native app feel */
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+pre::-webkit-scrollbar,
+.history-drawer__body::-webkit-scrollbar,
+.el-select-dropdown::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 body {
   margin: 0;
   background: #f0f2f5;
@@ -27,6 +43,8 @@ body {
   touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 /* ===== App Header ===== */
