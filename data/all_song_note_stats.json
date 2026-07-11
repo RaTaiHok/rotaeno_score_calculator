@@ -352,6 +352,45 @@
       "song_total": 2845
     },
     {
+      "song_id": "adam",
+      "song_name": "ADAM",
+      "difficulties": {
+        "I": {
+          "tap": 0,
+          "flick": 0,
+          "slide": 150,
+          "catch": 171,
+          "rotate": 2,
+          "total": 323
+        },
+        "II": {
+          "tap": 6,
+          "flick": 0,
+          "slide": 168,
+          "catch": 200,
+          "rotate": 10,
+          "total": 384
+        },
+        "III": {
+          "tap": 205,
+          "flick": 53,
+          "slide": 707,
+          "catch": 73,
+          "rotate": 27,
+          "total": 1065
+        },
+        "IV": {
+          "tap": 296,
+          "flick": 163,
+          "slide": 803,
+          "catch": 212,
+          "rotate": 61,
+          "total": 1535
+        }
+      },
+      "song_total": 3307
+    },
+    {
       "song_id": "all-nighter",
       "song_name": "ALL☆NIGHTER！",
       "difficulties": {
@@ -2365,6 +2404,53 @@
       "song_total": 2295
     },
     {
+      "song_id": "chariot",
+      "song_name": "Chariot",
+      "difficulties": {
+        "I": {
+          "tap": 31,
+          "flick": 0,
+          "slide": 262,
+          "catch": 76,
+          "rotate": 16,
+          "total": 385
+        },
+        "II": {
+          "tap": 55,
+          "flick": 0,
+          "slide": 451,
+          "catch": 121,
+          "rotate": 23,
+          "total": 650
+        },
+        "III": {
+          "tap": 121,
+          "flick": 172,
+          "slide": 436,
+          "catch": 265,
+          "rotate": 29,
+          "total": 1023
+        },
+        "IV": {
+          "tap": 233,
+          "flick": 304,
+          "slide": 440,
+          "catch": 88,
+          "rotate": 53,
+          "total": 1118
+        },
+        "IV_Alpha": {
+          "tap": 231,
+          "flick": 168,
+          "slide": 836,
+          "catch": 264,
+          "rotate": 46,
+          "total": 1545
+        }
+      },
+      "song_total": 4721
+    },
+    {
       "song_id": "chronomia",
       "song_name": "Chronomia",
       "difficulties": {
@@ -3980,6 +4066,45 @@
       "song_total": 3130
     },
     {
+      "song_id": "extraordinary",
+      "song_name": "Extraordinary",
+      "difficulties": {
+        "I": {
+          "tap": 40,
+          "flick": 0,
+          "slide": 255,
+          "catch": 71,
+          "rotate": 13,
+          "total": 379
+        },
+        "II": {
+          "tap": 46,
+          "flick": 0,
+          "slide": 523,
+          "catch": 44,
+          "rotate": 25,
+          "total": 638
+        },
+        "III": {
+          "tap": 102,
+          "flick": 0,
+          "slide": 776,
+          "catch": 93,
+          "rotate": 25,
+          "total": 996
+        },
+        "IV": {
+          "tap": 197,
+          "flick": 101,
+          "slide": 891,
+          "catch": 103,
+          "rotate": 53,
+          "total": 1345
+        }
+      },
+      "song_total": 3358
+    },
+    {
       "song_id": "fall-in-me",
       "song_name": "Fall in Me",
       "difficulties": {
@@ -4526,6 +4651,45 @@
       "song_total": 3584
     },
     {
+      "song_id": "full-circle",
+      "song_name": "Full Circle",
+      "difficulties": {
+        "I": {
+          "tap": 33,
+          "flick": 0,
+          "slide": 141,
+          "catch": 62,
+          "rotate": 9,
+          "total": 245
+        },
+        "II": {
+          "tap": 81,
+          "flick": 0,
+          "slide": 237,
+          "catch": 85,
+          "rotate": 42,
+          "total": 445
+        },
+        "III": {
+          "tap": 155,
+          "flick": 102,
+          "slide": 328,
+          "catch": 83,
+          "rotate": 18,
+          "total": 686
+        },
+        "IV": {
+          "tap": 239,
+          "flick": 140,
+          "slide": 495,
+          "catch": 154,
+          "rotate": 65,
+          "total": 1093
+        }
+      },
+      "song_total": 2469
+    },
+    {
       "song_id": "galactic-warzone",
       "song_name": "GALACTIC WARZONE",
       "difficulties": {
@@ -5033,6 +5197,45 @@
       "song_total": 1990
     },
     {
+      "song_id": "hearts-station",
+      "song_name": "Heart's Station",
+      "difficulties": {
+        "I": {
+          "tap": 71,
+          "flick": 0,
+          "slide": 138,
+          "catch": 92,
+          "rotate": 5,
+          "total": 306
+        },
+        "II": {
+          "tap": 192,
+          "flick": 0,
+          "slide": 142,
+          "catch": 64,
+          "rotate": 5,
+          "total": 403
+        },
+        "III": {
+          "tap": 186,
+          "flick": 105,
+          "slide": 368,
+          "catch": 71,
+          "rotate": 17,
+          "total": 747
+        },
+        "IV": {
+          "tap": 243,
+          "flick": 179,
+          "slide": 459,
+          "catch": 95,
+          "rotate": 20,
+          "total": 996
+        }
+      },
+      "song_total": 2452
+    },
+    {
       "song_id": "heartache",
       "song_name": "Heartache",
       "difficulties": {
@@ -5273,6 +5476,45 @@
         }
       },
       "song_total": 3492
+    },
+    {
+      "song_id": "i-cant-wait",
+      "song_name": "I Can't Wait",
+      "difficulties": {
+        "I": {
+          "tap": 56,
+          "flick": 0,
+          "slide": 263,
+          "catch": 41,
+          "rotate": 5,
+          "total": 365
+        },
+        "II": {
+          "tap": 118,
+          "flick": 0,
+          "slide": 219,
+          "catch": 53,
+          "rotate": 7,
+          "total": 397
+        },
+        "III": {
+          "tap": 61,
+          "flick": 47,
+          "slide": 357,
+          "catch": 53,
+          "rotate": 58,
+          "total": 576
+        },
+        "IV": {
+          "tap": 142,
+          "flick": 88,
+          "slide": 767,
+          "catch": 235,
+          "rotate": 8,
+          "total": 1240
+        }
+      },
+      "song_total": 2578
     },
     {
       "song_id": "ignite",
@@ -7748,6 +7990,45 @@
       "song_total": 3994
     },
     {
+      "song_id": "oldschool-tentacles",
+      "song_name": "OLDSCHOOL TENTACLES",
+      "difficulties": {
+        "I": {
+          "tap": 84,
+          "flick": 0,
+          "slide": 334,
+          "catch": 121,
+          "rotate": 24,
+          "total": 563
+        },
+        "II": {
+          "tap": 146,
+          "flick": 0,
+          "slide": 352,
+          "catch": 137,
+          "rotate": 32,
+          "total": 667
+        },
+        "III": {
+          "tap": 321,
+          "flick": 163,
+          "slide": 296,
+          "catch": 288,
+          "rotate": 43,
+          "total": 1111
+        },
+        "IV": {
+          "tap": 302,
+          "flick": 283,
+          "slide": 616,
+          "catch": 344,
+          "rotate": 97,
+          "total": 1642
+        }
+      },
+      "song_total": 3983
+    },
+    {
       "song_id": "obsidian",
       "song_name": "Obsidian(Short Ver.)",
       "difficulties": {
@@ -8099,6 +8380,84 @@
       "song_total": 3281
     },
     {
+      "song_id": "piper-hyper-caravan",
+      "song_name": "Piper Hyper Caravan",
+      "difficulties": {
+        "I": {
+          "tap": 112,
+          "flick": 0,
+          "slide": 180,
+          "catch": 103,
+          "rotate": 36,
+          "total": 431
+        },
+        "II": {
+          "tap": 288,
+          "flick": 0,
+          "slide": 165,
+          "catch": 136,
+          "rotate": 48,
+          "total": 637
+        },
+        "III": {
+          "tap": 226,
+          "flick": 102,
+          "slide": 731,
+          "catch": 110,
+          "rotate": 6,
+          "total": 1175
+        },
+        "IV": {
+          "tap": 219,
+          "flick": 405,
+          "slide": 1456,
+          "catch": 639,
+          "rotate": 71,
+          "total": 2790
+        }
+      },
+      "song_total": 5033
+    },
+    {
+      "song_id": "prismrose",
+      "song_name": "Prismrose",
+      "difficulties": {
+        "I": {
+          "tap": 54,
+          "flick": 0,
+          "slide": 29,
+          "catch": 58,
+          "rotate": 20,
+          "total": 161
+        },
+        "II": {
+          "tap": 91,
+          "flick": 0,
+          "slide": 119,
+          "catch": 75,
+          "rotate": 29,
+          "total": 314
+        },
+        "III": {
+          "tap": 170,
+          "flick": 69,
+          "slide": 116,
+          "catch": 75,
+          "rotate": 67,
+          "total": 497
+        },
+        "IV": {
+          "tap": 220,
+          "flick": 52,
+          "slide": 497,
+          "catch": 142,
+          "rotate": 69,
+          "total": 980
+        }
+      },
+      "song_total": 1952
+    },
+    {
       "song_id": "provison",
       "song_name": "Provison",
       "difficulties": {
@@ -8175,6 +8534,53 @@
         }
       },
       "song_total": 2609
+    },
+    {
+      "song_id": "pure-ruby",
+      "song_name": "Pure Ruby",
+      "difficulties": {
+        "I": {
+          "tap": 79,
+          "flick": 0,
+          "slide": 276,
+          "catch": 88,
+          "rotate": 20,
+          "total": 463
+        },
+        "II": {
+          "tap": 214,
+          "flick": 0,
+          "slide": 324,
+          "catch": 77,
+          "rotate": 20,
+          "total": 635
+        },
+        "III": {
+          "tap": 288,
+          "flick": 88,
+          "slide": 703,
+          "catch": 102,
+          "rotate": 22,
+          "total": 1203
+        },
+        "IV": {
+          "tap": 396,
+          "flick": 106,
+          "slide": 802,
+          "catch": 413,
+          "rotate": 24,
+          "total": 1741
+        },
+        "IV_Alpha": {
+          "tap": 559,
+          "flick": 181,
+          "slide": 741,
+          "catch": 529,
+          "rotate": 48,
+          "total": 2058
+        }
+      },
+      "song_total": 6100
     },
     {
       "song_id": "pure-white-tale-of-serissa",
@@ -8409,6 +8815,45 @@
         }
       },
       "song_total": 2638
+    },
+    {
+      "song_id": "redrave",
+      "song_name": "REDRAVE",
+      "difficulties": {
+        "I": {
+          "tap": 60,
+          "flick": 0,
+          "slide": 240,
+          "catch": 52,
+          "rotate": 26,
+          "total": 378
+        },
+        "II": {
+          "tap": 110,
+          "flick": 0,
+          "slide": 305,
+          "catch": 99,
+          "rotate": 36,
+          "total": 550
+        },
+        "III": {
+          "tap": 270,
+          "flick": 78,
+          "slide": 446,
+          "catch": 307,
+          "rotate": 25,
+          "total": 1126
+        },
+        "IV": {
+          "tap": 431,
+          "flick": 356,
+          "slide": 0,
+          "catch": 1180,
+          "rotate": 38,
+          "total": 2005
+        }
+      },
+      "song_total": 4059
     },
     {
       "song_id": "revocate",
@@ -8957,6 +9402,45 @@
       "song_total": 4253
     },
     {
+      "song_id": "seq-unleash-knockout",
+      "song_name": "SEQ_UNLEASH: Knockout!",
+      "difficulties": {
+        "I": {
+          "tap": 58,
+          "flick": 0,
+          "slide": 211,
+          "catch": 108,
+          "rotate": 34,
+          "total": 411
+        },
+        "II": {
+          "tap": 170,
+          "flick": 0,
+          "slide": 440,
+          "catch": 24,
+          "rotate": 34,
+          "total": 668
+        },
+        "III": {
+          "tap": 222,
+          "flick": 93,
+          "slide": 451,
+          "catch": 120,
+          "rotate": 118,
+          "total": 1004
+        },
+        "IV": {
+          "tap": 400,
+          "flick": 153,
+          "slide": 633,
+          "catch": 450,
+          "rotate": 77,
+          "total": 1713
+        }
+      },
+      "song_total": 3796
+    },
+    {
       "song_id": "sonic-surge",
       "song_name": "SONIC SURGE",
       "difficulties": {
@@ -9033,6 +9517,45 @@
         }
       },
       "song_total": 4017
+    },
+    {
+      "song_id": "super-reactor",
+      "song_name": "SUPER REACTOR",
+      "difficulties": {
+        "I": {
+          "tap": 115,
+          "flick": 0,
+          "slide": 102,
+          "catch": 44,
+          "rotate": 24,
+          "total": 285
+        },
+        "II": {
+          "tap": 146,
+          "flick": 0,
+          "slide": 350,
+          "catch": 77,
+          "rotate": 52,
+          "total": 625
+        },
+        "III": {
+          "tap": 235,
+          "flick": 160,
+          "slide": 450,
+          "catch": 168,
+          "rotate": 61,
+          "total": 1074
+        },
+        "IV": {
+          "tap": 404,
+          "flick": 230,
+          "slide": 542,
+          "catch": 435,
+          "rotate": 49,
+          "total": 1660
+        }
+      },
+      "song_total": 3644
     },
     {
       "song_id": "sakura-rain",
@@ -9306,6 +9829,45 @@
         }
       },
       "song_total": 4818
+    },
+    {
+      "song_id": "silver-linings",
+      "song_name": "Silver Linings",
+      "difficulties": {
+        "I": {
+          "tap": 54,
+          "flick": 0,
+          "slide": 184,
+          "catch": 39,
+          "rotate": 12,
+          "total": 289
+        },
+        "II": {
+          "tap": 151,
+          "flick": 0,
+          "slide": 172,
+          "catch": 98,
+          "rotate": 12,
+          "total": 433
+        },
+        "III": {
+          "tap": 150,
+          "flick": 73,
+          "slide": 454,
+          "catch": 50,
+          "rotate": 13,
+          "total": 740
+        },
+        "IV": {
+          "tap": 172,
+          "flick": 111,
+          "slide": 567,
+          "catch": 179,
+          "rotate": 12,
+          "total": 1041
+        }
+      },
+      "song_total": 2503
     },
     {
       "song_id": "silver-town",
@@ -10104,6 +10666,45 @@
       "song_total": 3354
     },
     {
+      "song_id": "stratoliner",
+      "song_name": "Stratoliner",
+      "difficulties": {
+        "I": {
+          "tap": 72,
+          "flick": 0,
+          "slide": 82,
+          "catch": 42,
+          "rotate": 16,
+          "total": 212
+        },
+        "II": {
+          "tap": 185,
+          "flick": 0,
+          "slide": 141,
+          "catch": 40,
+          "rotate": 5,
+          "total": 371
+        },
+        "III": {
+          "tap": 199,
+          "flick": 67,
+          "slide": 343,
+          "catch": 60,
+          "rotate": 8,
+          "total": 677
+        },
+        "IV": {
+          "tap": 179,
+          "flick": 149,
+          "slide": 783,
+          "catch": 195,
+          "rotate": 22,
+          "total": 1328
+        }
+      },
+      "song_total": 2588
+    },
+    {
       "song_id": "summer-time-memory",
       "song_name": "Summer Time Memory",
       "difficulties": {
@@ -10227,6 +10828,45 @@
         }
       },
       "song_total": 2178
+    },
+    {
+      "song_id": "switch-up",
+      "song_name": "Switch Up!",
+      "difficulties": {
+        "I": {
+          "tap": 32,
+          "flick": 0,
+          "slide": 302,
+          "catch": 167,
+          "rotate": 17,
+          "total": 518
+        },
+        "II": {
+          "tap": 86,
+          "flick": 0,
+          "slide": 414,
+          "catch": 321,
+          "rotate": 9,
+          "total": 830
+        },
+        "III": {
+          "tap": 266,
+          "flick": 106,
+          "slide": 630,
+          "catch": 13,
+          "rotate": 17,
+          "total": 1032
+        },
+        "IV": {
+          "tap": 452,
+          "flick": 268,
+          "slide": 313,
+          "catch": 339,
+          "rotate": 24,
+          "total": 1396
+        }
+      },
+      "song_total": 3776
     },
     {
       "song_id": "sword-of-convallaria",
@@ -11359,6 +11999,45 @@
         }
       },
       "song_total": 2074
+    },
+    {
+      "song_id": "within-the-horizon",
+      "song_name": "Within the Horizon",
+      "difficulties": {
+        "I": {
+          "tap": 12,
+          "flick": 0,
+          "slide": 488,
+          "catch": 117,
+          "rotate": 34,
+          "total": 651
+        },
+        "II": {
+          "tap": 19,
+          "flick": 0,
+          "slide": 705,
+          "catch": 100,
+          "rotate": 39,
+          "total": 863
+        },
+        "III": {
+          "tap": 34,
+          "flick": 61,
+          "slide": 695,
+          "catch": 136,
+          "rotate": 60,
+          "total": 986
+        },
+        "IV": {
+          "tap": 142,
+          "flick": 45,
+          "slide": 741,
+          "catch": 160,
+          "rotate": 68,
+          "total": 1156
+        }
+      },
+      "song_total": 3656
     },
     {
       "song_id": "xlix",
@@ -13523,6 +14202,45 @@
       "song_total": 2775
     },
     {
+      "song_id": "freefall",
+      "song_name": "フリーフォール",
+      "difficulties": {
+        "I": {
+          "tap": 38,
+          "flick": 0,
+          "slide": 142,
+          "catch": 94,
+          "rotate": 15,
+          "total": 289
+        },
+        "II": {
+          "tap": 31,
+          "flick": 0,
+          "slide": 227,
+          "catch": 185,
+          "rotate": 26,
+          "total": 469
+        },
+        "III": {
+          "tap": 94,
+          "flick": 37,
+          "slide": 343,
+          "catch": 271,
+          "rotate": 40,
+          "total": 785
+        },
+        "IV": {
+          "tap": 150,
+          "flick": 118,
+          "slide": 588,
+          "catch": 308,
+          "rotate": 63,
+          "total": 1227
+        }
+      },
+      "song_total": 2770
+    },
+    {
       "song_id": "bassline-yatteru-lol",
       "song_name": "ベースラインやってる？笑",
       "difficulties": {
@@ -14335,6 +15053,45 @@
       "song_total": 2761
     },
     {
+      "song_id": "angel-halo",
+      "song_name": "天使光輪",
+      "difficulties": {
+        "I": {
+          "tap": 75,
+          "flick": 0,
+          "slide": 304,
+          "catch": 57,
+          "rotate": 25,
+          "total": 461
+        },
+        "II": {
+          "tap": 151,
+          "flick": 0,
+          "slide": 308,
+          "catch": 126,
+          "rotate": 34,
+          "total": 619
+        },
+        "III": {
+          "tap": 239,
+          "flick": 124,
+          "slide": 466,
+          "catch": 125,
+          "rotate": 50,
+          "total": 1004
+        },
+        "IV": {
+          "tap": 423,
+          "flick": 245,
+          "slide": 644,
+          "catch": 317,
+          "rotate": 69,
+          "total": 1698
+        }
+      },
+      "song_total": 3782
+    },
+    {
       "song_id": "tianlingling",
       "song_name": "天灵灵地灵灵",
       "difficulties": {
@@ -15035,6 +15792,53 @@
         }
       },
       "song_total": 3716
+    },
+    {
+      "song_id": "loli-kami",
+      "song_name": "粛聖!! ロリ神レクイエム☆",
+      "difficulties": {
+        "I": {
+          "tap": 108,
+          "flick": 0,
+          "slide": 338,
+          "catch": 138,
+          "rotate": 20,
+          "total": 604
+        },
+        "II": {
+          "tap": 215,
+          "flick": 0,
+          "slide": 560,
+          "catch": 125,
+          "rotate": 14,
+          "total": 914
+        },
+        "III": {
+          "tap": 295,
+          "flick": 110,
+          "slide": 663,
+          "catch": 157,
+          "rotate": 32,
+          "total": 1257
+        },
+        "IV": {
+          "tap": 380,
+          "flick": 147,
+          "slide": 771,
+          "catch": 162,
+          "rotate": 71,
+          "total": 1531
+        },
+        "IV_Alpha": {
+          "tap": 303,
+          "flick": 325,
+          "slide": 2508,
+          "catch": 297,
+          "rotate": 87,
+          "total": 3520
+        }
+      },
+      "song_total": 7826
     },
     {
       "song_id": "kouen",

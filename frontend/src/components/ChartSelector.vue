@@ -1,4 +1,6 @@
 <script setup>
+import { computed, onMounted, onUnmounted, ref } from "vue";
+
 const selectedSongId = defineModel("selectedSongId", { default: "" });
 const selectedDifficulty = defineModel("selectedDifficulty", { default: "" });
 
@@ -26,6 +28,12 @@ defineProps({
 });
 
 const emit = defineEmits(["song-filter", "difficulty-filter"]);
+
+const windowWidth = ref(window.innerWidth);
+const onResize = () => { windowWidth.value = window.innerWidth; };
+const componentSize = computed(() => windowWidth.value <= 480 ? "large" : "default");
+onMounted(() => window.addEventListener("resize", onResize));
+onUnmounted(() => window.removeEventListener("resize", onResize));
 </script>
 
 <template>
@@ -41,6 +49,7 @@ const emit = defineEmits(["song-filter", "difficulty-filter"]);
           clearable
           :loading="loadingSongs"
           :filter-method="(query) => emit('song-filter', query)"
+          :size="componentSize"
           class="full-width"
         >
           <el-option
@@ -49,9 +58,9 @@ const emit = defineEmits(["song-filter", "difficulty-filter"]);
             :label="song.song_name"
             :value="song.song_id"
           >
-            <div class="option-row">
-              <span>{{ song.song_name }}</span>
-              <small>{{ song.song_id }}</small>
+            <div class="song-option">
+              <span class="song-option__name">{{ song.song_name }}</span>
+              <span class="song-option__id">{{ song.song_id }}</span>
             </div>
           </el-option>
         </el-select>
@@ -67,6 +76,7 @@ const emit = defineEmits(["song-filter", "difficulty-filter"]);
           :loading="loadingDifficulties"
           :disabled="!selectedSongId"
           :filter-method="(query) => emit('difficulty-filter', query)"
+          :size="componentSize"
           class="full-width"
         >
           <el-option

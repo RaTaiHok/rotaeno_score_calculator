@@ -6,3 +6,9 @@
 /frontend/node_modules
 /src-tauri/gen
 /frontend/package-lock.json
+/src-tauri/icons
+/src-tauri/nekoRTHsama.jks
+/.github
+/.github/workflows
+/build_android.sh
+/BUILD.md/data/latest_version.txt

@@ -15,6 +15,7 @@ pub fn calculate_score(stats: &NoteStats, input: &ScoreInput) -> Result<ScoreRes
         non_slide_miss: input.non_slide_miss,
         slide_hit: input.slide_hit,
         slide_miss: input.slide_miss,
+        non_slide_unplayed: 0,
     };
 
     let score_parts = math::ScoreMath::new(stats).from_judgement(&judgement);
@@ -38,14 +39,14 @@ pub fn reverse_from_target(
     stats: &NoteStats,
     input: &ReverseInput,
 ) -> Result<ReverseResult, String> {
-    reverse::from_target(stats, input, false)
+    reverse::from_target(stats, input, false, input.min_played_ratio)
 }
 
 pub fn reverse_all_from_target(
     stats: &NoteStats,
     input: &ReverseInput,
 ) -> Result<ReverseResult, String> {
-    reverse::from_target(stats, input, true)
+    reverse::from_target(stats, input, true, input.min_played_ratio)
 }
 
 pub fn validate_input_counts(stats: &NoteStats, input: &ScoreInput) -> Result<(), String> {
@@ -56,6 +57,7 @@ pub fn validate_input_counts(stats: &NoteStats, input: &ScoreInput) -> Result<()
         non_slide_miss: input.non_slide_miss,
         slide_hit: input.slide_hit,
         slide_miss: input.slide_miss,
+        non_slide_unplayed: 0,
     };
 
     if judgement.non_slide_sum() > stats.non_slide_total() {

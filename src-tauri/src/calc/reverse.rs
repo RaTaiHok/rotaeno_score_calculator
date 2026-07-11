@@ -12,6 +12,7 @@ pub fn from_target(
     stats: &NoteStats,
     input: &ReverseInput,
     include_all: bool,
+    min_played_ratio: f64,
 ) -> Result<ReverseResult, String> {
     let non_slide_total = stats.non_slide_total();
     let slide_total = stats.slide;
@@ -40,7 +41,7 @@ pub fn from_target(
                         h,
                         input.target_score,
                     ) {
-                        exact.push_eval(&eval, filter);
+                        exact.push_eval(&eval, filter, min_played_ratio);
                     }
                 }
             }
@@ -67,9 +68,9 @@ pub fn from_target(
                     input.target_score,
                 ) {
                     if eval.exact_match {
-                        exact.push_eval(&eval, filter);
+                        exact.push_eval(&eval, filter, min_played_ratio);
                     } else {
-                        nearest.push_nearest_eval(&eval, filter);
+                        nearest.push_nearest_eval(&eval, filter, min_played_ratio);
                     }
                 }
             }
@@ -103,12 +104,12 @@ fn build_result(
     let message = if top.exact_match {
         if include_all {
             format!(
-                "已找到 {} 个精确命中目标分数的方案，按 Perfect+、Perfect、Good、Miss 优先级排序，当前展示全部方案。",
+                "已找到 {} 个精确命中目标分数的方案，按 Miss数少、P+比率高、G数少 的优先级排序，当前展示全部方案。",
                 exact_candidate_count
             )
         } else {
             format!(
-                "已找到 {} 个精确命中目标分数的方案，按 Perfect+、Perfect、Good、Miss 优先级排序，仅展示前 {} 个。",
+                "已找到 {} 个精确命中目标分数的方案，按 Miss数少、P+比率高、G数少 的优先级排序，仅展示前 {} 个。",
                 exact_candidate_count,
                 candidates.len()
             )
@@ -116,13 +117,13 @@ fn build_result(
     } else {
         if include_all {
             format!(
-                "未找到精确命中方案，找到 {} 个与目标分数最接近的方案（绝对差值 {}），按 Perfect+、Perfect、Good、Miss 优先级排序，当前展示全部方案。",
+                "未找到精确命中方案，找到 {} 个与目标分数最接近的方案（绝对差值 {}），按 Miss数少、P+比率高、G数少 的优先级排序，当前展示全部方案。",
                 bucket.count,
                 top.difference.abs()
             )
         } else {
             format!(
-                "未找到精确命中方案，找到 {} 个与目标分数最接近的方案（绝对差值 {}），按 Perfect+、Perfect、Good、Miss 优先级排序，仅展示前 {} 个。",
+                "未找到精确命中方案，找到 {} 个与目标分数最接近的方案（绝对差值 {}），按 Miss数少、P+比率高、G数少 的优先级排序，仅展示前 {} 个。",
                 bucket.count,
                 top.difference.abs(),
                 candidates.len()
@@ -174,8 +175,8 @@ impl CandidateBucket {
         !self.top.is_empty()
     }
 
-    fn push_eval(&mut self, eval: &TupleEval, filter: ReverseJudgementFilter) {
-        let accepted = candidates_from_eval(eval, self.include_all, filter);
+    fn push_eval(&mut self, eval: &TupleEval, filter: ReverseJudgementFilter, min_played_ratio: f64) {
+        let accepted = candidates_from_eval(eval, self.include_all, filter, min_played_ratio);
         if accepted.is_empty() {
             return;
         }
@@ -186,8 +187,8 @@ impl CandidateBucket {
         }
     }
 
-    fn push_nearest_eval(&mut self, eval: &TupleEval, filter: ReverseJudgementFilter) {
-        let accepted = candidates_from_eval(eval, self.include_all, filter);
+    fn push_nearest_eval(&mut self, eval: &TupleEval, filter: ReverseJudgementFilter, min_played_ratio: f64) {
+        let accepted = candidates_from_eval(eval, self.include_all, filter, min_played_ratio);
         if accepted.is_empty() {
             return;
         }
@@ -229,7 +230,7 @@ struct TupleEval {
     h: u32,
     remaining_non_slide: u32,
     slide_total: u32,
-    g_max: u32,
+    g_min: u32,
     g_count: usize,
     score_factor: f64,
     raw_score: f64,
@@ -270,7 +271,7 @@ impl TupleEval {
             h,
             remaining_non_slide,
             slide_total,
-            g_max,
+            g_min,
             g_count: (g_max - g_min + 1) as usize,
             score_factor: score_parts.score_factor,
             raw_score: score_parts.raw_score,
@@ -280,9 +281,9 @@ impl TupleEval {
         })
     }
 
-    fn to_candidate(&self, non_slide_good: u32) -> ReverseCandidate {
+    fn to_candidate(&self, non_slide_good: u32, non_slide_unplayed: u32) -> ReverseCandidate {
         let slide_hit = self.h - non_slide_good;
-        let non_slide_miss = self.remaining_non_slide - non_slide_good;
+        let non_slide_miss = self.remaining_non_slide - non_slide_good - non_slide_unplayed;
         let slide_miss = self.slide_total - slide_hit;
 
         ReverseCandidate {
@@ -293,6 +294,7 @@ impl TupleEval {
                 non_slide_miss,
                 slide_hit,
                 slide_miss,
+                non_slide_unplayed,
             },
             score_factor: self.score_factor,
             raw_score: self.raw_score,
@@ -330,7 +332,9 @@ fn candidates_from_eval(
     eval: &TupleEval,
     include_all: bool,
     filter: ReverseJudgementFilter,
+    min_played_ratio: f64,
 ) -> Vec<ReverseCandidate> {
+    let non_slide_total = eval.remaining_non_slide + eval.non_slide_perfect_plus + eval.non_slide_perfect;
     let local_keep = if include_all {
         eval.g_count
     } else {
@@ -339,8 +343,23 @@ fn candidates_from_eval(
 
     let mut candidates = Vec::with_capacity(local_keep);
     for offset in 0..local_keep {
-        let g = eval.g_max - offset as u32;
-        let candidate = eval.to_candidate(g);
+        // Iterate from g_min upward: prefer fewer G (more realistic)
+        let g = eval.g_min + offset as u32;
+        let candidate = eval.to_candidate(g, 0);
+
+        // Filter by min_played_ratio: skip candidates with too few played notes
+        if min_played_ratio > 0.0 {
+            let played = candidate.judgement.non_slide_played();
+            let ratio = if non_slide_total > 0 {
+                played as f64 / non_slide_total as f64
+            } else {
+                0.0
+            };
+            if ratio < min_played_ratio {
+                continue;
+            }
+        }
+
         if filter.allows(&candidate.judgement) {
             candidates.push(candidate);
         }
@@ -365,21 +384,36 @@ fn push_candidate(
 }
 
 fn compare_candidates(a: &ReverseCandidate, b: &ReverseCandidate) -> Ordering {
+    // 1. Closest score match always wins
     a.difference
         .abs()
         .cmp(&b.difference.abs())
+    // 2. Fewer total misses first (key: prefer actually playing notes)
+        .then_with(|| a.judgement.total_miss().cmp(&b.judgement.total_miss()))
+    // 3. Higher P+ ratio on played non-slide notes (more realistic accuracy)
+        .then_with(|| {
+            let ar = ratio_on_played(&a.judgement);
+            let br = ratio_on_played(&b.judgement);
+            br.partial_cmp(&ar).unwrap_or(Ordering::Equal)
+        })
+    // 4. Higher raw P+ count (within same ratio)
         .then_with(|| {
             b.judgement
                 .non_slide_perfect_plus
                 .cmp(&a.judgement.non_slide_perfect_plus)
         })
-        .then_with(|| {
-            b.judgement
-                .non_slide_perfect
-                .cmp(&a.judgement.non_slide_perfect)
-        })
-        .then_with(|| b.judgement.non_slide_good.cmp(&a.judgement.non_slide_good))
-        .then_with(|| a.judgement.total_miss().cmp(&b.judgement.total_miss()))
+    // 5. Fewer Good (lower G is more realistic)
+        .then_with(|| a.judgement.non_slide_good.cmp(&b.judgement.non_slide_good))
+    // 6. Higher SlideHit (more slides hit = better play)
         .then_with(|| b.judgement.slide_hit.cmp(&a.judgement.slide_hit))
+    // 7. Higher matched score as final tiebreaker
         .then_with(|| b.matched_score.cmp(&a.matched_score))
+}
+
+fn ratio_on_played(j: &JudgementBreakdown) -> f64 {
+    let played = j.non_slide_played();
+    if played == 0 {
+        return 0.0;
+    }
+    j.non_slide_perfect_plus as f64 / played as f64
 }

@@ -23,15 +23,29 @@ export function formatReverseResult(result) {
   const candidateLines = candidates.map((candidate, index) => {
     const diffSign = candidate.difference >= 0 ? "+" : "";
 
-    return [
-      `[${index + 1}] 方案分数 ${formatInt(candidate.matched_score)} (差值 ${diffSign}${candidate.difference})`,
-      `  - 非Slide P+: ${formatInt(candidate.judgement.non_slide_perfect_plus)}`,
-      `  - 非Slide P: ${formatInt(candidate.judgement.non_slide_perfect)}`,
-      `  - 非Slide G: ${formatInt(candidate.judgement.non_slide_good)}`,
+    const pPlus = candidate.judgement.non_slide_perfect_plus;
+    const p = candidate.judgement.non_slide_perfect;
+    const g = candidate.judgement.non_slide_good;
+    const played = pPlus + p + g;
+    const pPlusRatio = played > 0 ? ((pPlus / played) * 100).toFixed(1) : "0.0";
+    const unplayed = candidate.judgement.non_slide_unplayed || 0;
+    const totalMiss = (candidate.judgement.non_slide_miss || 0) + (candidate.judgement.slide_miss || 0);
+
+    const lines = [
+      `[${index + 1}] 方案分数 ${formatInt(candidate.matched_score)} (差值 ${diffSign}${candidate.difference}) | P+比率: ${pPlusRatio}% | 总Miss: ${formatInt(totalMiss)}`,
+      `  - 非Slide P+: ${formatInt(pPlus)}`,
+      `  - 非Slide P: ${formatInt(p)}`,
+      `  - 非Slide G: ${formatInt(g)}`,
       `  - 非Slide Miss: ${formatInt(candidate.judgement.non_slide_miss)}`,
       `  - Slide Hit: ${formatInt(candidate.judgement.slide_hit)}`,
       `  - Slide Miss: ${formatInt(candidate.judgement.slide_miss)}`
-    ].join("\n");
+    ];
+
+    if (unplayed > 0) {
+      lines.push(`  - 未游玩: ${formatInt(unplayed)}`);
+    }
+
+    return lines.join("\n");
   });
 
   return [
@@ -44,7 +58,7 @@ export function formatReverseResult(result) {
     `展示方案数: ${formatInt(candidates.length)}`,
     `精确命中数: ${formatInt(result.exact_candidate_count ?? 0)}`,
     "",
-    "候选方案（已按 Perfect+、Perfect、Good、Miss 优先级排序）:",
+    "候选方案（已按 Miss数少、P+比率高、G数少 的优先级排序）:",
     candidateLines.length > 0 ? candidateLines.join("\n\n") : "-"
   ].join("\n");
 }

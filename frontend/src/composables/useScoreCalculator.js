@@ -24,7 +24,7 @@ function createEmptyJudgement() {
   };
 }
 
-export function useScoreCalculator() {
+export function useScoreCalculator(onResult = null) {
   const songs = ref([]);
   const difficulties = ref([]);
   const selectedSongId = ref("");
@@ -152,6 +152,7 @@ export function useScoreCalculator() {
       clearError();
       const result = await requestCalculateScore(createScoreInput());
       calcResultText.value = formatCalcResult(result);
+      saveEntry("calc", calcResultText.value);
     } catch (error) {
       setError(error);
     }
@@ -182,9 +183,27 @@ export function useScoreCalculator() {
 
       reverseResultText.value = formatReverseResult(result);
       applyJudgement(result.judgement);
+      saveEntry(includeAll ? "reverse-all" : "reverse", reverseResultText.value);
     } catch (error) {
       setError(error);
     }
+  }
+
+  function saveEntry(type, resultText) {
+    if (!onResult) {
+      return;
+    }
+
+    const song = songs.value.find((s) => s.song_id === selectedSongId.value);
+    onResult({
+      type,
+      songId: selectedSongId.value,
+      songName: song?.song_name ?? selectedSongId.value,
+      difficulty: selectedDifficulty.value,
+      targetScore: type !== "calc" ? Math.max(0, toInt(targetScore.value)) : null,
+      calcResult: type === "calc" ? resultText : null,
+      reverseResult: type !== "calc" ? resultText : null
+    });
   }
 
   function createScoreInput() {
@@ -205,7 +224,8 @@ export function useScoreCalculator() {
       allow_perfect_plus: Boolean(reverseFilter.allow_perfect_plus),
       allow_perfect: Boolean(reverseFilter.allow_perfect),
       allow_good: Boolean(reverseFilter.allow_good),
-      allow_miss: Boolean(reverseFilter.allow_miss)
+      allow_miss: Boolean(reverseFilter.allow_miss),
+      min_played_ratio: 0.0
     };
   }
 

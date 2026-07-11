@@ -94,6 +94,8 @@ pub struct JudgementBreakdown {
     pub non_slide_miss: u32,
     pub slide_hit: u32,
     pub slide_miss: u32,
+    #[serde(default)]
+    pub non_slide_unplayed: u32,
 }
 
 impl JudgementBreakdown {
@@ -102,6 +104,11 @@ impl JudgementBreakdown {
             + self.non_slide_perfect
             + self.non_slide_good
             + self.non_slide_miss
+            + self.non_slide_unplayed
+    }
+
+    pub fn non_slide_played(&self) -> u32 {
+        self.non_slide_perfect_plus + self.non_slide_perfect + self.non_slide_good
     }
 
     pub fn slide_sum(&self) -> u32 {
@@ -141,6 +148,8 @@ pub struct ReverseInput {
     pub allow_good: bool,
     #[serde(default = "default_true")]
     pub allow_miss: bool,
+    #[serde(default)]
+    pub min_played_ratio: f64,
 }
 
 fn default_true() -> bool {
@@ -200,6 +209,16 @@ pub struct ReverseCandidateResult {
     pub score_factor: f64,
     pub raw_score: f64,
     pub judgement: JudgementBreakdown,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DataUpdateInfo {
+    pub has_update: bool,
+    pub local_version: String,
+    pub remote_version: String,
+    pub download_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

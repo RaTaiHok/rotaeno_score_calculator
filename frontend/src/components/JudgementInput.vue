@@ -1,4 +1,6 @@
 <script setup>
+import { computed, onMounted, onUnmounted, ref } from "vue";
+
 defineProps({
   canOperate: {
     type: Boolean,
@@ -35,6 +37,12 @@ defineProps({
 });
 
 const emit = defineEmits(["update-field"]);
+
+const windowWidth = ref(window.innerWidth);
+const onResize = () => { windowWidth.value = window.innerWidth; };
+const componentSize = computed(() => windowWidth.value <= 480 ? "large" : "default");
+onMounted(() => window.addEventListener("resize", onResize));
+onUnmounted(() => window.removeEventListener("resize", onResize));
 </script>
 
 <template>
@@ -48,6 +56,7 @@ const emit = defineEmits(["update-field"]);
         <el-input-number
           :model-value="judgement.non_slide_perfect_plus"
           :min="0"
+          :size="componentSize"
           :disabled="!canOperate"
           @update:model-value="(value) => emit('update-field', 'non_slide_perfect_plus', value)"
         />
@@ -57,6 +66,7 @@ const emit = defineEmits(["update-field"]);
         <el-input-number
           :model-value="judgement.non_slide_perfect"
           :min="0"
+          :size="componentSize"
           :disabled="!canOperate"
           @update:model-value="(value) => emit('update-field', 'non_slide_perfect', value)"
         />
@@ -66,6 +76,7 @@ const emit = defineEmits(["update-field"]);
         <el-input-number
           :model-value="judgement.non_slide_good"
           :min="0"
+          :size="componentSize"
           :disabled="!canOperate"
           @update:model-value="(value) => emit('update-field', 'non_slide_good', value)"
         />
@@ -75,6 +86,7 @@ const emit = defineEmits(["update-field"]);
         <el-input-number
           :model-value="judgement.non_slide_miss"
           :min="0"
+          :size="componentSize"
           :disabled="!canOperate"
           @update:model-value="(value) => emit('update-field', 'non_slide_miss', value)"
         />
@@ -84,6 +96,7 @@ const emit = defineEmits(["update-field"]);
         <el-input-number
           :model-value="judgement.slide_hit"
           :min="0"
+          :size="componentSize"
           :disabled="!canOperate"
           @update:model-value="(value) => emit('update-field', 'slide_hit', value)"
         />
@@ -93,6 +106,7 @@ const emit = defineEmits(["update-field"]);
         <el-input-number
           :model-value="judgement.slide_miss"
           :min="0"
+          :size="componentSize"
           :disabled="!canOperate"
           @update:model-value="(value) => emit('update-field', 'slide_miss', value)"
         />
