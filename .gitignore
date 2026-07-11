@@ -5,9 +5,8 @@
 /frontend/dist
 /frontend/node_modules
 /src-tauri/gen
-/frontend/package-lock.json
-/src-tauri/icons
 /src-tauri/nekoRTHsama.jks
+/frontend/package-lock.json
+/.github/java-upgrade
 /build_android.sh
 /BUILD.md
-/.github/java-upgrade
