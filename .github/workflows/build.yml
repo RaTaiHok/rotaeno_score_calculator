@@ -51,76 +51,65 @@ jobs:
           set -euo pipefail
           export PATH="$HOME/.cargo/bin:$PATH"
 
-          # Locate the Xcode project (exclude .xcodeproj internal files)
-          XCODEPROJ=$(find src-tauri/gen/apple -maxdepth 5 -name "*.xcodeproj" -type d 2>/dev/null | head -1)
-          # Only look for standalone workspaces, not the auto-generated one inside .xcodeproj
-          XCWORKSPACE=$(find src-tauri/gen/apple -maxdepth 5 -name "*.xcworkspace" -type d -not -path "*/.xcodeproj/*" 2>/dev/null | head -1)
-
           echo "=== Directory tree ==="
           find src-tauri/gen/apple -maxdepth 4 -type d 2>/dev/null || true
 
-          if [ -n "$XCWORKSPACE" ]; then
-            PROJ_DIR=$(dirname "$XCWORKSPACE")
-            WORKSPACE_NAME=$(basename "$XCWORKSPACE")
-            echo "Using workspace: $XCWORKSPACE"
-          elif [ -n "$XCODEPROJ" ]; then
-            PROJ_DIR=$(dirname "$XCODEPROJ")
-            PROJECT_NAME=$(basename "$XCODEPROJ")
-            echo "Using project: $XCODEPROJ"
-          else
-            echo "ERROR: No .xcodeproj or .xcworkspace found!"
-            find src-tauri/gen/apple -type d 2>/dev/null | head -30
+          # Tauri generates exactly one .xcodeproj under src-tauri/gen/apple/.
+          # (The only .xcworkspace in the tree is the internal project.xcworkspace
+          #  inside the .xcodeproj, which must NOT be used.)
+          XCODEPROJ=$(find src-tauri/gen/apple -maxdepth 3 -name "*.xcodeproj" -type d 2>/dev/null | head -1)
+          if [ -z "$XCODEPROJ" ]; then
+            echo "ERROR: No .xcodeproj found under src-tauri/gen/apple!"
             exit 1
           fi
+          PROJ_DIR=$(dirname "$XCODEPROJ")
+          PROJECT_NAME=$(basename "$XCODEPROJ")
+          echo "Using project: $XCODEPROJ"
 
           cd "$PROJ_DIR"
 
-          # Detect scheme
-          SCHEME=$(xcodebuild -list -json 2>/dev/null | python3 -c "
+          # Detect scheme: try xcodebuild -list -json first, fall back to
+          # reading the shared .xcscheme files directly from the project.
+          SCHEME=$(xcodebuild -list -json -project "$PROJECT_NAME" 2>/dev/null | python3 -c "
           import json, sys
-          data = json.load(sys.stdin)
-          ws = data.get('workspace', {}).get('schemes', [])
-          pj = data.get('project', {}).get('schemes', [])
-          schemes = ws or pj
-          print(schemes[0] if schemes else '')
-          ")
+          try:
+              data = json.load(sys.stdin)
+              schemes = data.get('project', {}).get('schemes', [])
+              print(schemes[0] if schemes else '')
+          except Exception:
+              print('')
+          " || true)
+
+          if [ -z "$SCHEME" ]; then
+            SCHEME_FILE=$(find "$PROJ_DIR/$PROJECT_NAME/xcshareddata/xcschemes" -maxdepth 1 -name "*.xcscheme" -type f 2>/dev/null | head -1)
+            if [ -n "$SCHEME_FILE" ]; then
+              SCHEME=$(basename "$SCHEME_FILE" .xcscheme)
+            fi
+          fi
+
           echo "Scheme: $SCHEME"
           if [ -z "$SCHEME" ]; then
             echo "ERROR: no build scheme found"
+            ls -la "$PROJ_DIR/$PROJECT_NAME/xcshareddata/xcschemes/" 2>/dev/null || true
             exit 1
           fi
 
           # Use an absolute derivedDataPath so later steps can find it
           DERIVED="$PWD/build/ios"
 
-          SIGNING_ARGS=(
-            CODE_SIGNING_ALLOWED=NO
-            CODE_SIGNING_REQUIRED=NO
-            CODE_SIGN_IDENTITY=""
+          # Build .app without code signing (ad-hoc signing happens later with ldid)
+          xcodebuild \
+            -project "$PROJECT_NAME" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$DERIVED" \
+            PRODUCT_NAME=RotaenoScoreCalc \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER=""
-          )
-
-          if [ -n "${WORKSPACE_NAME:-}" ]; then
-            xcodebuild \
-              -workspace "$WORKSPACE_NAME" \
-              -scheme "$SCHEME" \
-              -configuration Release \
-              -sdk iphoneos \
-              -destination 'generic/platform=iOS' \
-              -derivedDataPath "$DERIVED" \
-              PRODUCT_NAME=RotaenoScoreCalc \
-              "${SIGNING_ARGS[@]}"
-          else
-            xcodebuild \
-              -project "$PROJECT_NAME" \
-              -scheme "$SCHEME" \
-              -configuration Release \
-              -sdk iphoneos \
-              -destination 'generic/platform=iOS' \
-              -derivedDataPath "$DERIVED" \
-              PRODUCT_NAME=RotaenoScoreCalc \
-              "${SIGNING_ARGS[@]}"
-          fi
 
           # Save path for next step
           echo "DERIVED_DATA=$DERIVED" >> "$GITHUB_ENV"
