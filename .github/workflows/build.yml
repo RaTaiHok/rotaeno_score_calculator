@@ -31,144 +31,77 @@ jobs:
         working-directory: frontend
         run: npm install
 
-      # ---- Build frontend (required before generating the iOS project) ----
-      - name: Build frontend
-        working-directory: frontend
-        run: npm run build
-
-      # ---- Pre-build Rust library (catches Rust errors early, warms cache) ----
-      - name: Build Rust library
-        working-directory: src-tauri
-        run: cargo build --release --target aarch64-apple-ios
-
       # ---- Generate Xcode project ----
-      - name: Tauri iOS init
+      - name: Generate iOS Xcode project
         run: cargo tauri ios init
 
-      # ---- Build .app with xcodebuild (skip signing) ----
-      - name: Build iOS .app (unsigned)
-        run: |
-          set -euo pipefail
-          export PATH="$HOME/.cargo/bin:$PATH"
+      # ---- Build unsigned IPA via the official Tauri flow ----
+      # `cargo tauri ios build` runs beforeBuildCommand (frontend build), writes the
+      # <identifier>-server-addr RPC file that the Xcode "Build Rust Code" script
+      # phase reads via WebSocket, builds the Rust library, runs xcodebuild + archive,
+      # and creates the IPA. --no-sign skips code signing; --ci skips prompts.
+      # Running xcodebuild directly is NOT possible because the script phase
+      # requires that RPC server to be alive (see tauri-cli mobile/mod.rs).
+      - name: Build unsigned IPA
+        run: cargo tauri ios build --no-sign --ci
 
-          echo "=== Directory tree ==="
-          find src-tauri/gen/apple -maxdepth 4 -type d 2>/dev/null || true
-
-          # Tauri generates exactly one .xcodeproj under src-tauri/gen/apple/.
-          # (The only .xcworkspace in the tree is the internal project.xcworkspace
-          #  inside the .xcodeproj, which must NOT be used.)
-          XCODEPROJ=$(find src-tauri/gen/apple -maxdepth 3 -name "*.xcodeproj" -type d 2>/dev/null | head -1)
-          if [ -z "$XCODEPROJ" ]; then
-            echo "ERROR: No .xcodeproj found under src-tauri/gen/apple!"
-            exit 1
-          fi
-          PROJ_DIR=$(dirname "$XCODEPROJ")
-          PROJECT_NAME=$(basename "$XCODEPROJ")
-          echo "Using project: $XCODEPROJ"
-
-          cd "$PROJ_DIR"
-
-          # Detect scheme: try xcodebuild -list -json first, fall back to
-          # reading the shared .xcscheme files directly from the project.
-          SCHEME=$(xcodebuild -list -json -project "$PROJECT_NAME" 2>/dev/null | python3 -c "
-          import json, sys
-          try:
-              data = json.load(sys.stdin)
-              schemes = data.get('project', {}).get('schemes', [])
-              print(schemes[0] if schemes else '')
-          except Exception:
-              print('')
-          " || true)
-
-          if [ -z "$SCHEME" ]; then
-            SCHEME_FILE=$(find "$PROJ_DIR/$PROJECT_NAME/xcshareddata/xcschemes" -maxdepth 1 -name "*.xcscheme" -type f 2>/dev/null | head -1)
-            if [ -n "$SCHEME_FILE" ]; then
-              SCHEME=$(basename "$SCHEME_FILE" .xcscheme)
-            fi
-          fi
-
-          echo "Scheme: $SCHEME"
-          if [ -z "$SCHEME" ]; then
-            echo "ERROR: no build scheme found"
-            ls -la "$PROJ_DIR/$PROJECT_NAME/xcshareddata/xcschemes/" 2>/dev/null || true
-            exit 1
-          fi
-
-          # Use an absolute derivedDataPath so later steps can find it
-          DERIVED="$PWD/build/ios"
-
-          # Build .app without code signing (ad-hoc signing happens later with ldid)
-          xcodebuild \
-            -project "$PROJECT_NAME" \
-            -scheme "$SCHEME" \
-            -configuration Release \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath "$DERIVED" \
-            PRODUCT_NAME=RotaenoScoreCalc \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE_SPECIFIER=""
-
-          # Save path for next step
-          echo "DERIVED_DATA=$DERIVED" >> "$GITHUB_ENV"
-
-      # ---- Locate .app, ad-hoc sign with ldid, then package IPA ----
-      - name: Package unsigned IPA
+      # ---- Ad-hoc sign + package ----
+      # The --no-sign IPA is completely unsigned. Ad-hoc signing the Mach-O
+      # binaries with ldid makes the IPA accepted more reliably by
+      # AltStore / SideStore / TrollStore. Output filename is ASCII-safe.
+      - name: Ad-hoc sign and package IPA
         run: |
           set -euo pipefail
 
-          DERIVED="${DERIVED_DATA:-src-tauri/gen/apple/build/ios}"
-
-          # Find the built .app in derived data
-          APP_PATH=$(find "$DERIVED" -maxdepth 6 -name "*.app" -type d 2>/dev/null | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "ERROR: Could not find .app bundle under $DERIVED"
-            find "$DERIVED" -type d 2>/dev/null | head -30 || true
-            echo "--- Fallback global search ---"
-            find src-tauri/gen/apple -maxdepth 8 -name "*.app" -type d 2>/dev/null | head -10 || true
+          IPA_SRC=$(find "$GITHUB_WORKSPACE/src-tauri/gen/apple/build" -name "*.ipa" -type f 2>/dev/null | head -1)
+          if [ -z "$IPA_SRC" ]; then
+            echo "ERROR: no IPA found under src-tauri/gen/apple/build"
+            find "$GITHUB_WORKSPACE/src-tauri/gen/apple/build" -type f 2>/dev/null | head -30 || true
             exit 1
           fi
-          echo "Found app: $APP_PATH"
+          echo "Found IPA: $IPA_SRC"
 
-          # ldid is required for ad-hoc signing (makes IPA valid for sideload tools)
+          SKIP_LDID=0
           if ! command -v ldid >/dev/null 2>&1; then
             echo "Installing ldid..."
-            brew install ldid
+            brew install ldid || { echo "WARNING: ldid install failed, skipping ad-hoc signing"; SKIP_LDID=1; }
           fi
 
-          # Ad-hoc sign all Mach-O binaries
-          echo "Ad-hoc signing binaries..."
-          find "$APP_PATH" -type f | while IFS= read -r file; do
-            if file "$file" | grep -q "Mach-O"; then
-              ldid -S "$file" 2>/dev/null || echo "  (skipped ad-hoc sign for $file)"
-            fi
-          done
+          WORK="$RUNNER_TEMP/ipa-work"
+          rm -rf "$WORK"
+          mkdir -p "$WORK"
+          cd "$WORK"
+          unzip -q "$IPA_SRC"
 
-          # Package into IPA (IPA = zip with Payload/)
-          IPA_DIR="$RUNNER_TEMP/ipa"
-          rm -rf "$IPA_DIR"
-          mkdir -p "$IPA_DIR/Payload"
-          cp -r "$APP_PATH" "$IPA_DIR/Payload/"
+          APP_DIR=$(find Payload -maxdepth 1 -name "*.app" -type d 2>/dev/null | head -1)
+          if [ -z "$APP_DIR" ]; then
+            echo "ERROR: no .app inside the IPA"
+            find Payload -maxdepth 2 2>/dev/null | head -20
+            exit 1
+          fi
+          echo "Found app: $APP_DIR"
 
-          # Use an ASCII-safe IPA filename (product name contains non-ASCII characters)
-          IPA_FILE="$RUNNER_TEMP/RotaenoScoreCalc.ipa"
-          (cd "$IPA_DIR" && zip -qry "$IPA_FILE" Payload)
+          if [ "$SKIP_LDID" = "0" ]; then
+            echo "Ad-hoc signing Mach-O binaries..."
+            find "$APP_DIR" -type f | while IFS= read -r f; do
+              if file "$f" | grep -q "Mach-O"; then
+                ldid -S "$f" 2>/dev/null || echo "  (skipped $f)"
+              fi
+            done
+          fi
 
-          # Copy to a predictable upload path
-          UPLOAD_DIR="src-tauri/gen/apple/build/ios/ipa"
-          mkdir -p "$UPLOAD_DIR"
-          cp "$IPA_FILE" "$UPLOAD_DIR/RotaenoScoreCalc.ipa"
+          # Re-package with an ASCII-safe IPA filename
+          zip -qry "$RUNNER_TEMP/RotaenoScoreCalc.ipa" Payload
 
+          mkdir -p "$GITHUB_WORKSPACE/ipa-output"
+          cp "$RUNNER_TEMP/RotaenoScoreCalc.ipa" "$GITHUB_WORKSPACE/ipa-output/RotaenoScoreCalc.ipa"
           echo "=== IPA ==="
-          ls -la "$UPLOAD_DIR"
-          echo "IPA created: $UPLOAD_DIR/RotaenoScoreCalc.ipa"
+          ls -la "$GITHUB_WORKSPACE/ipa-output/"
 
       # ---- Upload artifact ----
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
           name: iOS-IPA-unsigned
-          path: src-tauri/gen/apple/build/ios/ipa/RotaenoScoreCalc.ipa
+          path: ipa-output/RotaenoScoreCalc.ipa
           if-no-files-found: error
