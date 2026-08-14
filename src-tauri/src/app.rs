@@ -4,11 +4,19 @@ use crate::model::{
     SongDataFile, SongEntry, SongSummary,
 };
 use std::fs;
+use std::io::Read;
 use std::sync::RwLock;
 use tauri::Manager;
 use tauri::State;
 
 const DATA_BASE_URL: &str = "https://rth.srv-selena.lookatthesky.cn/Rotaeno/data";
+/// 服务器上的固定数据文件名。更新数据时只需覆盖上传这一个文件。
+const REMOTE_DATA_FILE: &str = "all_song_note_stats.json";
+/// 本地缓存文件名（与服务器同名）。
+const LOCAL_DATA_FILE: &str = "all_song_note_stats.json";
+/// 本地保存的服务器 ETag，用于下次请求带 If-None-Match（304 跳过下载）。
+const LOCAL_ETAG_FILE: &str = "data_etag.txt";
+/// 内置数据：仅作为全新安装且无法联网时的兜底，不再跟随每次数据更新重新构建。
 const BUNDLED_JSON: &str = include_str!("../../data/all_song_note_stats.json");
 const BUNDLED_VERSION: &str = include_str!("../../data/version.txt");
 
@@ -16,6 +24,24 @@ pub struct AppState {
     pub songs: RwLock<Vec<SongEntry>>,
     pub data_version: RwLock<String>,
     pub is_bundled: RwLock<bool>, // true = using built-in data, needs network download
+    // check_data_update 下载好的数据字节，供 download_latest_data 复用（省一次下载）
+    pub pending_data: RwLock<Option<Vec<u8>>>,
+    // 服务器返回的 ETag，下载成功后才写入本地文件
+    pub pending_etag: RwLock<Option<String>>,
+}
+
+fn data_version_desc(song_count: usize) -> String {
+    format!("{} 首歌曲", song_count)
+}
+
+fn bundled_version_desc() -> String {
+    format!("内置 v{}", BUNDLED_VERSION.trim())
+}
+
+fn http_agent() -> ureq::Agent {
+    ureq::AgentBuilder::new()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
 }
 
 #[derive(serde::Serialize)]
@@ -32,33 +58,32 @@ pub fn load_app_state(app: &tauri::AppHandle) -> Result<AppState, String> {
 
     fs::create_dir_all(&data_dir).map_err(|e| format!("无法创建数据目录: {e}"))?;
 
-    let local_json_path = data_dir.join("all_song_note_stats.json");
-    let local_version_path = data_dir.join("data_version.txt");
+    let local_json_path = data_dir.join(LOCAL_DATA_FILE);
 
-    // Try local file first
-    if let (Ok(json), Ok(ver)) = (
-        fs::read_to_string(&local_json_path),
-        fs::read_to_string(&local_version_path),
-    ) {
-        let parsed: SongDataFile =
-            serde_json::from_str(&json).map_err(|e| format!("本地数据解析失败: {e}"))?;
-        let version = ver.trim().to_string();
-        return Ok(AppState {
-            songs: RwLock::new(parsed.songs),
-            data_version: RwLock::new(version),
-            is_bundled: RwLock::new(false),
-        });
+    // 优先使用本地缓存（有缓存说明之前已成功联网同步过）
+    if let Ok(json) = fs::read_to_string(&local_json_path) {
+        if let Ok(parsed) = serde_json::from_str::<SongDataFile>(&json) {
+            let count = parsed.songs.len();
+            return Ok(AppState {
+                songs: RwLock::new(parsed.songs),
+                data_version: RwLock::new(data_version_desc(count)),
+                is_bundled: RwLock::new(false),
+                pending_data: RwLock::new(None),
+                pending_etag: RwLock::new(None),
+            });
+        }
     }
 
-    // First launch — use bundled data as temporary fallback, mark as bundled
+    // 全新安装（或本地缓存损坏）— 用内置数据兜底，等待联网同步
     let parsed: SongDataFile =
         serde_json::from_str(BUNDLED_JSON).map_err(|e| format!("内置数据解析失败: {e}"))?;
-    let version = BUNDLED_VERSION.trim().to_string();
 
     Ok(AppState {
         songs: RwLock::new(parsed.songs),
-        data_version: RwLock::new(version),
+        data_version: RwLock::new(bundled_version_desc()),
         is_bundled: RwLock::new(true),
+        pending_data: RwLock::new(None),
+        pending_etag: RwLock::new(None),
     })
 }
 
@@ -127,67 +152,98 @@ pub fn reverse_all_from_score(
 }
 
 #[tauri::command]
-pub fn check_data_update(state: State<'_, AppState>) -> Result<DataUpdateInfo, String> {
-    let local_version = state
-        .data_version
-        .read()
-        .map_err(|e| format!("{e}"))?
-        .clone();
+pub fn check_data_update(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<DataUpdateInfo, String> {
+    let data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("无法获取应用数据目录: {e}"))?;
 
-    let version_url = format!("{DATA_BASE_URL}/latest_version.txt");
+    let local_path = data_dir.join(LOCAL_DATA_FILE);
+    let etag_path = data_dir.join(LOCAL_ETAG_FILE);
+    let local_etag = fs::read_to_string(&etag_path)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
 
-    match ureq::get(&version_url).call() {
-        Ok(response) => {
-            if response.status() != 200 {
-                return Ok(DataUpdateInfo {
-                    has_update: false,
-                    local_version,
-                    remote_version: String::new(),
-                    download_url: String::new(),
-                    error: Some(format!(
-                        "服务器返回 {} —— {} 不存在，请确认服务端已放置 latest_version.txt",
-                        response.status(),
-                        version_url
-                    )),
-                });
-            }
+    let local_count = state.songs.read().map_err(|e| format!("{e}"))?.len();
+    let local_version = data_version_desc(local_count);
+    let url = format!("{DATA_BASE_URL}/{REMOTE_DATA_FILE}");
 
-            let remote_version = match response.into_string() {
-                Ok(s) => s.trim().to_string(),
-                Err(e) => {
-                    return Ok(DataUpdateInfo {
-                        has_update: false,
-                        local_version,
-                        remote_version: String::new(),
-                        download_url: String::new(),
-                        error: Some(format!("读取版本内容失败: {e}")),
-                    });
-                }
-            };
+    let mut req = http_agent().get(&url);
+    if let Some(etag) = &local_etag {
+        req = req.set("If-None-Match", etag);
+    }
 
-            let has_update = remote_version != local_version && !remote_version.is_empty();
-            let download_url = if has_update {
-                format!("{DATA_BASE_URL}/all_song_note_stats_{remote_version}.json")
-            } else {
-                String::new()
-            };
-
-            Ok(DataUpdateInfo {
-                has_update,
+    let resp = match req.call() {
+        Ok(r) => r,
+        Err(e) => {
+            return Ok(DataUpdateInfo {
+                has_update: false,
                 local_version,
-                remote_version,
-                download_url,
-                error: None,
-            })
+                remote_version: String::new(),
+                download_url: url,
+                error: Some(format!("无法连接更新服务器: {e}")),
+            });
         }
-        Err(e) => Ok(DataUpdateInfo {
+    };
+
+    // 服务器 ETag 与本地记录一致 → 数据没有变化，无需下载
+    if resp.status() == 304 {
+        let remote_version = format!("{}（无更新）", local_version);
+        return Ok(DataUpdateInfo {
+            has_update: false,
+            local_version,
+            remote_version,
+            download_url: String::new(),
+            error: None,
+        });
+    }
+
+    if resp.status() != 200 {
+        return Ok(DataUpdateInfo {
             has_update: false,
             local_version,
             remote_version: String::new(),
-            download_url: String::new(),
-            error: Some(format!("无法连接服务器: {e}")),
-        }),
+            download_url: url,
+            error: Some(format!("服务器返回状态 {}", resp.status())),
+        });
     }
+
+    let server_etag = resp.header("etag").map(|s| s.to_string());
+    let mut bytes = Vec::new();
+    resp.into_reader()
+        .read_to_end(&mut bytes)
+        .map_err(|e| format!("读取数据内容失败: {e}"))?;
+
+    // 校验服务器数据格式
+    let parsed: SongDataFile =
+        serde_json::from_slice(&bytes).map_err(|e| format!("远端数据格式错误: {e}"))?;
+    let remote_count = parsed.songs.len();
+
+    // 与本地缓存逐字节比较，内容不同才算有更新
+    let local_bytes = fs::read(&local_path).unwrap_or_default();
+    let has_update = local_bytes.is_empty() || bytes != local_bytes;
+
+    // 缓存字节供 download_latest_data 复用，避免二次下载
+    {
+        let mut pending = state.pending_data.write().map_err(|e| format!("{e}"))?;
+        *pending = Some(bytes);
+    }
+    {
+        let mut etag = state.pending_etag.write().map_err(|e| format!("{e}"))?;
+        *etag = server_etag;
+    }
+
+    Ok(DataUpdateInfo {
+        has_update,
+        local_version,
+        remote_version: data_version_desc(remote_count),
+        download_url: url,
+        error: None,
+    })
 }
 
 #[tauri::command]
@@ -195,67 +251,66 @@ pub fn download_latest_data(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    // Fetch remote version
-    let version_url = format!("{DATA_BASE_URL}/latest_version.txt");
-    let response = ureq::get(&version_url)
-        .call()
-        .map_err(|e| format!("无法连接更新服务器: {e}"))?;
-
-    if response.status() != 200 {
-        return Err(format!("服务器返回状态 {}", response.status()));
-    }
-
-    let remote_version = response
-        .into_string()
-        .map_err(|e| format!("读取远端版本信息失败: {e}"))?
-        .trim()
-        .to_string();
-
-    // Download data
-    let data_url = format!("{DATA_BASE_URL}/all_song_note_stats_{remote_version}.json");
-    let response = ureq::get(&data_url)
-        .call()
-        .map_err(|e| format!("下载数据失败: {e}"))?;
-
-    if response.status() != 200 {
-        return Err(format!("下载数据返回状态 {}", response.status()));
-    }
-
-    let json = response
-        .into_string()
-        .map_err(|e| format!("读取数据内容失败: {e}"))?;
-
-    // Validate
-    let parsed: SongDataFile =
-        serde_json::from_str(&json).map_err(|e| format!("远端数据格式错误: {e}"))?;
-
-    // Save locally
     let data_dir = app
         .path()
         .app_data_dir()
         .map_err(|e| format!("无法获取应用数据目录: {e}"))?;
     fs::create_dir_all(&data_dir).map_err(|e| format!("无法创建数据目录: {e}"))?;
 
-    fs::write(data_dir.join("all_song_note_stats.json"), &json)
-        .map_err(|e| format!("保存数据失败: {e}"))?;
-    fs::write(data_dir.join("data_version.txt"), &remote_version)
-        .map_err(|e| format!("保存版本信息失败: {e}"))?;
+    // 优先复用 check_data_update 已下载的字节；否则重新下载
+    let (bytes, server_etag) = {
+        let pending = state.pending_data.read().map_err(|e| format!("{e}"))?;
+        match pending.as_ref() {
+            Some(b) => (
+                b.clone(),
+                state.pending_etag.read().map_err(|e| format!("{e}"))?.clone(),
+            ),
+            None => {
+                let url = format!("{DATA_BASE_URL}/{REMOTE_DATA_FILE}");
+                let resp = http_agent()
+                    .get(&url)
+                    .call()
+                    .map_err(|e| format!("无法连接更新服务器: {e}"))?;
+                if resp.status() != 200 {
+                    return Err(format!("服务器返回状态 {}", resp.status()));
+                }
+                let etag = resp.header("etag").map(|s| s.to_string());
+                let mut b = Vec::new();
+                resp.into_reader()
+                    .read_to_end(&mut b)
+                    .map_err(|e| format!("读取数据内容失败: {e}"))?;
+                (b, etag)
+            }
+        }
+    };
 
-    // Update in-memory state
+    // 校验格式
+    let parsed: SongDataFile =
+        serde_json::from_slice(&bytes).map_err(|e| format!("远端数据格式错误: {e}"))?;
+    let count = parsed.songs.len();
+
+    // 保存本地缓存 + ETag（下次启动带 If-None-Match 可命中 304）
+    fs::write(data_dir.join(LOCAL_DATA_FILE), &bytes)
+        .map_err(|e| format!("保存数据失败: {e}"))?;
+    if let Some(etag) = &server_etag {
+        let _ = fs::write(data_dir.join(LOCAL_ETAG_FILE), etag);
+    }
+
+    // 更新内存状态
     {
         let mut songs = state.songs.write().map_err(|e| format!("{e}"))?;
         *songs = parsed.songs;
     }
     {
         let mut ver = state.data_version.write().map_err(|e| format!("{e}"))?;
-        *ver = remote_version.clone();
+        *ver = data_version_desc(count);
     }
     {
         let mut bundled = state.is_bundled.write().map_err(|e| format!("{e}"))?;
         *bundled = false;
     }
 
-    Ok(remote_version)
+    Ok(data_version_desc(count))
 }
 
 #[tauri::command]
@@ -265,15 +320,14 @@ pub fn reset_data(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<S
         .app_data_dir()
         .map_err(|e| format!("无法获取应用数据目录: {e}"))?;
 
-    // Delete local data files — report what was deleted
-    let json_path = data_dir.join("all_song_note_stats.json");
-    let ver_path = data_dir.join("data_version.txt");
+    // 删除本地缓存和 ETag
+    let json_path = data_dir.join(LOCAL_DATA_FILE);
+    let etag_path = data_dir.join(LOCAL_ETAG_FILE);
     let json_existed = json_path.exists();
-    let ver_existed = ver_path.exists();
     fs::remove_file(&json_path).ok();
-    fs::remove_file(&ver_path).ok();
+    fs::remove_file(&etag_path).ok();
 
-    // Also clean up any versioned JSON files that were downloaded
+    // 清理旧版本遗留的版本化 JSON 文件
     if let Ok(entries) = fs::read_dir(&data_dir) {
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
@@ -283,10 +337,10 @@ pub fn reset_data(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<S
         }
     }
 
-    // Revert to bundled data
+    // 恢复内置数据
     let parsed: SongDataFile =
         serde_json::from_str(BUNDLED_JSON).map_err(|e| format!("内置数据解析失败: {e}"))?;
-    let version = BUNDLED_VERSION.trim().to_string();
+    let count = parsed.songs.len();
 
     {
         let mut songs = state.songs.write().map_err(|e| format!("{e}"))?;
@@ -294,7 +348,7 @@ pub fn reset_data(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<S
     }
     {
         let mut ver = state.data_version.write().map_err(|e| format!("{e}"))?;
-        *ver = version.clone();
+        *ver = bundled_version_desc();
     }
     {
         let mut bundled = state.is_bundled.write().map_err(|e| format!("{e}"))?;
@@ -302,8 +356,8 @@ pub fn reset_data(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<S
     }
 
     Ok(format!(
-        "已重置为内置数据 v{version}（数据目录: {}，删除: json={json_existed} ver={ver_existed}）",
-        data_dir.display()
+        "已重置为内置数据（{} 首歌曲，删除: json={json_existed}）",
+        count
     ))
 }
 

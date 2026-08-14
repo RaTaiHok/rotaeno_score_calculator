@@ -28,13 +28,23 @@
 
 ## 数据
 
-谱面数据首次启动时从服务器下载最新版本，后续自动检测更新。内置 v2.24.0 作为离线备用
+App 启动时自动从服务器下载谱面数据并**逐字节比对本地缓存**，内容不同才更新。
+服务器只维护一个固定文件，内置数据仅作为全新安装且无法联网时的离线兜底，**数据更新无需重新构建/发布 App**。
 
 ```text
 https://rth.srv-selena.lookatthesky.cn/Rotaeno/data/
-├── latest_version.txt
-└── all_song_note_stats_{version}.json
+└── all_song_note_stats.json   ← 唯一需要维护的文件
 ```
+
+### 更新数据的步骤（服务器端）
+
+1. 用新的 `all_song_note_stats.json` **覆盖上传**到服务器
+2. 完成 —— App 下次启动会自动检测并下载
+
+> 若服务器支持 ETag（nginx / 对象存储 / CDN 通常支持），App 会自动带上 `If-None-Match` 头，
+> 数据未变化时命中 304，几乎不消耗流量。
+
+> 旧方案（`latest_version.txt` + `all_song_note_stats_{version}.json`）已废弃，可删除。
 
 ## License
 
