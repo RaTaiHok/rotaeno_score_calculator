@@ -27,7 +27,7 @@ function openGithub() {
         />
         <div class="app-header__titles">
           <span class="app-header__title">Rotaeno 分数计算器</span>
-          <span class="app-header__version">v0.1.0</span>
+          <span class="app-header__version">v0.2.0</span>
         </div>
       </div>
 

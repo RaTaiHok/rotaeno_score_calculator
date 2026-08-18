@@ -6,7 +6,7 @@
 <h1 align="center">Rotaeno 分数计算器</h1>
 
 <p align="center">
-  <strong>App v0.1.0</strong> &nbsp;|&nbsp;
+  <strong>App v0.2.0</strong> &nbsp;|&nbsp;
   <strong>作者</strong> RTHsama &nbsp;|&nbsp;
   <a href="https://github.com/RaTaiHok/rotaeno_score_calculator">GitHub</a>
 </p>

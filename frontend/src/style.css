@@ -329,6 +329,18 @@ h3 {
   margin-top: 14px;
 }
 
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.result-header h3 {
+  margin: 0;
+}
+
 pre {
   margin: 0;
   border: 1px solid #d7ddea;
@@ -341,6 +353,9 @@ pre {
   overflow-x: auto;
   max-height: 500px;
   overflow-y: auto;
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
 }
 
 /* ===== Error ===== */

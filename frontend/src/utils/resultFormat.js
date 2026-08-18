@@ -33,6 +33,7 @@ export function formatReverseResult(result) {
 
     // 分情况：同一方案（同一分数）下 Miss 在 Slide/非Slide 之间的所有分配可能
     const variants = Array.isArray(candidate.miss_variants) ? candidate.miss_variants : [];
+    const hasMultipleVariants = variants.length > 1;
     const variantLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const variantLines = variants.map((v, i) => {
       const label = i < variantLabels.length ? variantLabels[i] : String(i + 1);
@@ -42,16 +43,21 @@ export function formatReverseResult(result) {
     const lines = [
       `[${index + 1}] 方案分数 ${formatInt(candidate.matched_score)} (差值 ${diffSign}${candidate.difference}) | P+比率: ${pPlusRatio}% | 总Miss: ${formatInt(totalMiss)}`,
       `  - 非Slide P+: ${formatInt(pPlus)}`,
-      `  - 非Slide P: ${formatInt(p)}`,
-      `  - 非Slide G: ${formatInt(g)}`,
-      `  - 非Slide Miss: ${formatInt(candidate.judgement.non_slide_miss)}`,
-      `  - Slide Hit: ${formatInt(candidate.judgement.slide_hit)}`,
-      `  - Slide Miss: ${formatInt(candidate.judgement.slide_miss)}`
+      `  - 非Slide P: ${formatInt(p)}`
     ];
 
-    if (variants.length > 1) {
-      lines.push(`  - Miss 分配（${formatInt(variants.length)} 种可能）:`);
+    if (hasMultipleVariants) {
+      // 有歧义：G/SlideHit/Miss 分配不确定，不显示固定值，直接列出所有可能
+      lines.push(`  - Good/Miss 分配（${formatInt(variants.length)} 种可能）:`);
       lines.push(...variantLines);
+    } else {
+      // 唯一分配：直接显示固定判定分布
+      lines.push(
+        `  - 非Slide G: ${formatInt(g)}`,
+        `  - 非Slide Miss: ${formatInt(candidate.judgement.non_slide_miss)}`,
+        `  - Slide Hit: ${formatInt(candidate.judgement.slide_hit)}`,
+        `  - Slide Miss: ${formatInt(candidate.judgement.slide_miss)}`
+      );
     }
 
     if (unplayed > 0) {

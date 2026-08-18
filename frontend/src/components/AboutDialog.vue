@@ -33,7 +33,7 @@ defineEmits(["close", "reset-data"]);
         <div class="about-dialog__info">
           <div class="about-dialog__row">
             <span class="about-dialog__label">App 版本</span>
-            <span class="about-dialog__value">v0.1.0</span>
+            <span class="about-dialog__value">v0.2.0</span>
           </div>
           <div class="about-dialog__row">
             <span class="about-dialog__label">Rotaeno Data</span>

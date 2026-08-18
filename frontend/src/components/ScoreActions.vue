@@ -1,9 +1,10 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from "vue";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 const targetScore = defineModel("targetScore", { default: 1_000_000 });
 
-defineProps({
+const props = defineProps({
   calcResultText: {
     type: String,
     default: "-"
@@ -33,6 +34,41 @@ const onResize = () => { windowWidth.value = window.innerWidth; };
 const componentSize = computed(() => windowWidth.value <= 480 ? "large" : "default");
 onMounted(() => window.addEventListener("resize", onResize));
 onUnmounted(() => window.removeEventListener("resize", onResize));
+
+// --- 多平台复制（PC + Android）---
+const copied = ref(false);
+const copyTimer = ref(null);
+
+function flashCopied() {
+  copied.value = true;
+  if (copyTimer.value) {
+    clearTimeout(copyTimer.value);
+  }
+  copyTimer.value = setTimeout(() => {
+    copied.value = false;
+  }, 1500);
+}
+
+async function copyReverseResult() {
+  const text = props.reverseResultText;
+  if (!text || text === "-") {
+    return;
+  }
+
+  try {
+    // Tauri 环境：clipboard-manager 插件（跨平台）
+    await writeText(text);
+    flashCopied();
+  } catch {
+    try {
+      // 浏览器调试环境回退
+      await navigator.clipboard.writeText(text);
+      flashCopied();
+    } catch (err) {
+      console.error("复制失败:", err);
+    }
+  }
+}
 </script>
 
 <template>
@@ -99,7 +135,16 @@ onUnmounted(() => window.removeEventListener("resize", onResize));
         <el-button :size="componentSize" :disabled="!canOperate" @click="emit('reverse-all')">展示全部</el-button>
       </div>
       <div v-if="reverseResultText !== '-'" class="result">
-        <h3>反算结果</h3>
+        <div class="result-header">
+          <h3>反算结果</h3>
+          <el-button
+            size="small"
+            :type="copied ? 'success' : 'default'"
+            @click="copyReverseResult"
+          >
+            {{ copied ? '已复制' : '复制结果' }}
+          </el-button>
+        </div>
         <pre>{{ reverseResultText }}</pre>
       </div>
     </div>
