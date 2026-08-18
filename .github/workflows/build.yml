@@ -9,7 +9,7 @@ on:
 
 jobs:
   # ============================================================
-  #  Windows (NSIS Installer + Portable exe)
+  #  Windows — 仅 Portable exe
   # ============================================================
   build-windows:
     runs-on: windows-latest
@@ -31,33 +31,25 @@ jobs:
         working-directory: frontend
         run: npm install
 
-      - name: Build Tauri app
-        run: cargo tauri build
+      # --no-bundle: 只产出便携版 exe，不构建 NSIS 安装包
+      - name: Build portable exe
+        run: cargo tauri build --no-bundle
 
-      - name: Debug — list outputs
+      - name: Package zip
+        shell: powershell
         run: |
-          echo "=== target/release ==="
-          ls target/release/*.exe 2>/dev/null || echo "(no exe)"
-          echo "=== bundle/nsis ==="
-          find target/release/bundle -type f 2>/dev/null || echo "(no bundle)"
-        shell: bash
+          Copy-Item target/release/rotaeno_score_calc.exe "$env:RUNNER_TEMP\Rotaeno_Score_Calc.exe"
+          Compress-Archive -Path "$env:RUNNER_TEMP\Rotaeno_Score_Calc.exe" -DestinationPath "$env:RUNNER_TEMP\Rotaeno_Score_Calc-Windows64x.zip" -Force
 
-      - name: Upload NSIS Installer
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Windows-Installer-NSIS
-          path: target/release/bundle/nsis/*.exe
-          if-no-files-found: warn
-
-      - name: Upload Portable exe
-        uses: actions/upload-artifact@v4
-        with:
-          name: Windows-Portable
-          path: target/release/rotaeno_score_calc.exe
-          if-no-files-found: warn
+          name: Rotaeno_Score_Calc-Windows64x
+          path: ${{ runner.temp }}/Rotaeno_Score_Calc-Windows64x.zip
+          if-no-files-found: error
 
   # ============================================================
-  #  Android (APK)
+  #  Android — 签名 APK（有 secrets 用正式签名，否则临时 keystore）
   # ============================================================
   build-android:
     runs-on: ubuntu-latest
@@ -103,6 +95,47 @@ jobs:
           echo "build.gradle.kts package name ensured"
         shell: bash
 
+      # 签名配置：优先使用 GitHub Secrets（与本地 nekoRTHsama.jks 一致，可覆盖安装）；
+      # 未配置时生成临时 keystore，保证 APK 可安装（签名与正式版不同，无法覆盖更新）。
+      - name: Configure Android signing
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_DIR="src-tauri/gen/android/app"
+          mkdir -p "$APP_DIR"
+          if [ -n "${ANDROID_KEYSTORE_B64:-}" ]; then
+            echo "使用 GitHub Secrets 中的正式 keystore"
+            echo "$ANDROID_KEYSTORE_B64" | base64 -d > src-tauri/nekoRTHsama.jks
+            cat > "$APP_DIR/keystore.properties" <<EOF
+            storeFile=../../../nekoRTHsama.jks
+            storePassword=${ANDROID_KEYSTORE_PASSWORD}
+            keyAlias=${ANDROID_KEY_ALIAS}
+            keyPassword=${ANDROID_KEY_PASSWORD}
+            v1SigningEnabled=true
+            v2SigningEnabled=true
+            v3SigningEnabled=true
+            EOF
+          else
+            echo "未配置 secrets.ANDROID_KEYSTORE_B64，生成临时 keystore（仅保证可安装）"
+            keytool -genkey -v -keystore "$APP_DIR/release.jks" -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias release -dname "CN=CI Build, O=Rotaeno, C=CN" -storepass rotaeno123 -keypass rotaeno123 2>/dev/null
+            cat > "$APP_DIR/keystore.properties" <<EOF
+            storeFile=release.jks
+            storePassword=rotaeno123
+            keyAlias=release
+            keyPassword=rotaeno123
+            v1SigningEnabled=true
+            v2SigningEnabled=true
+            v3SigningEnabled=true
+            EOF
+          fi
+          echo "keystore.properties:"
+          cat "$APP_DIR/keystore.properties"
+
       - name: Build Android APK
         run: cargo tauri android build
 
@@ -110,29 +143,34 @@ jobs:
         run: find src-tauri/gen/android -name "*.apk" -type f 2>/dev/null || echo "(no APKs)"
         shell: bash
 
-      - name: Upload APK (arm64)
-        uses: actions/upload-artifact@v4
-        with:
-          name: Android-APK-arm64
-          path: src-tauri/gen/android/app/build/outputs/apk/arm64/release/app-arm64-release.apk
-          if-no-files-found: warn
+      - name: Package zip
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="src-tauri/gen/android/app/build/outputs/apk"
+          STAGE="$RUNNER_TEMP/android"
+          mkdir -p "$STAGE"
+          cp "$OUT"/universal/release/app-universal-release.apk "$STAGE/" 2>/dev/null || true
+          cp "$OUT"/arm64/release/app-arm64-release.apk "$STAGE/" 2>/dev/null || true
+          ls -la "$STAGE"
+          cd "$STAGE"
+          zip -r "$RUNNER_TEMP/Rotaeno_Score_Calc-Android.zip" .
 
-      - name: Upload APK (universal)
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Android-APK-universal
-          path: src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
-          if-no-files-found: warn
+          name: Rotaeno_Score_Calc-Android
+          path: ${{ runner.temp }}/Rotaeno_Score_Calc-Android.zip
+          if-no-files-found: error
 
   # ============================================================
-  #  iOS IPA (无签名 — 用户自行用 AltStore/SideStore/TrollStore 签名安装)
+  #  iOS IPA（无签名 — 用户自行用 AltStore/SideStore/TrollStore 签名安装）
   # ============================================================
   build-ios:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      # ---- Toolchain ----
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -150,24 +188,12 @@ jobs:
         working-directory: frontend
         run: npm install
 
-      # ---- Generate Xcode project ----
       - name: Generate iOS Xcode project
         run: cargo tauri ios init
 
-      # ---- Build unsigned IPA via the official Tauri flow ----
-      # `cargo tauri ios build` runs beforeBuildCommand (frontend build), writes the
-      # <identifier>-server-addr RPC file that the Xcode "Build Rust Code" script
-      # phase reads via WebSocket, builds the Rust library, runs xcodebuild + archive,
-      # and creates the IPA. --no-sign skips code signing; --ci skips prompts.
-      # Running xcodebuild directly is NOT possible because the script phase
-      # requires that RPC server to be alive (see tauri-cli mobile/mod.rs).
       - name: Build unsigned IPA
         run: cargo tauri ios build --no-sign --ci
 
-      # ---- Ad-hoc sign + package ----
-      # The --no-sign IPA is completely unsigned. Ad-hoc signing the Mach-O
-      # binaries with ldid makes the IPA accepted more reliably by
-      # AltStore / SideStore / TrollStore. Output filename is ASCII-safe.
       - name: Ad-hoc sign and package IPA
         run: |
           set -euo pipefail
@@ -212,15 +238,105 @@ jobs:
           # Re-package with an ASCII-safe IPA filename
           zip -qry "$RUNNER_TEMP/RotaenoScoreCalc.ipa" Payload
 
-          mkdir -p "$GITHUB_WORKSPACE/ipa-output"
-          cp "$RUNNER_TEMP/RotaenoScoreCalc.ipa" "$GITHUB_WORKSPACE/ipa-output/RotaenoScoreCalc.ipa"
-          echo "=== IPA ==="
-          ls -la "$GITHUB_WORKSPACE/ipa-output/"
+      - name: Package zip
+        run: |
+          cd "$RUNNER_TEMP"
+          zip -r "Rotaeno_Score_Calc-iOS.zip" RotaenoScoreCalc.ipa
 
-      # ---- Upload artifact ----
-      - name: Upload unsigned IPA
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: iOS-IPA-unsigned
-          path: ipa-output/RotaenoScoreCalc.ipa
+          name: Rotaeno_Score_Calc-iOS
+          path: ${{ runner.temp }}/Rotaeno_Score_Calc-iOS.zip
+          if-no-files-found: error
+
+  # ============================================================
+  #  macOS — .app（ad-hoc 签名）
+  # ============================================================
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      # --bundles app: 只生成 .app（不生成 dmg）
+      - name: Build macOS app
+        run: cargo tauri build --bundles app
+
+      # Apple Silicon 要求 arm64 可执行文件有签名；无开发者证书时 ad-hoc 签名保证可运行
+      - name: Ad-hoc codesign
+        run: |
+          APP=$(find target/release/bundle/macos -maxdepth 1 -name "*.app" -type d | head -1)
+          echo "Found app: $APP"
+          codesign --force --deep --sign - "$APP" || echo "WARNING: ad-hoc codesign failed"
+
+      - name: Package zip
+        run: |
+          APP=$(find target/release/bundle/macos -maxdepth 1 -name "*.app" -type d | head -1)
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "$RUNNER_TEMP/Rotaeno_Score_Calc-Mac.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rotaeno_Score_Calc-Mac
+          path: ${{ runner.temp }}/Rotaeno_Score_Calc-Mac.zip
+          if-no-files-found: error
+
+  # ============================================================
+  #  Linux — .deb 包
+  # ============================================================
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Linux package
+        run: cargo tauri build --bundles deb
+
+      - name: Package zip
+        run: |
+          mkdir -p "$RUNNER_TEMP/linux"
+          cp target/release/bundle/deb/*.deb "$RUNNER_TEMP/linux/"
+          cd "$RUNNER_TEMP/linux"
+          zip -r "$RUNNER_TEMP/Rotaeno_Score_Calc-Linux.zip" .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rotaeno_Score_Calc-Linux
+          path: ${{ runner.temp }}/Rotaeno_Score_Calc-Linux.zip
           if-no-files-found: error
