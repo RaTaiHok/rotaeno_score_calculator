@@ -13,11 +13,19 @@ pub fn from_target(
     input: &ReverseInput,
     include_all: bool,
     min_played_ratio: f64,
+    mut on_progress: impl FnMut(u8),
 ) -> Result<ReverseResult, String> {
     let non_slide_total = stats.non_slide_total();
     let slide_total = stats.slide;
     let math = ScoreMath::new(stats);
     let filter = input.judgement_filter();
+
+    // 预计算总外层迭代量，用于进度上报
+    let mut total_iters: u64 = 0;
+    for p_plus in 0..=non_slide_total {
+        total_iters += ((non_slide_total - p_plus) + slide_total + 1) as u64;
+    }
+    let mut done_iters: u64 = 0;
 
     let mut exact = CandidateBucket::new(include_all);
     let mut nearest = CandidateBucket::new(include_all);
@@ -75,6 +83,10 @@ pub fn from_target(
                 }
             }
         }
+
+        done_iters += (max_h + 1) as u64;
+        let percent = ((done_iters * 100) / total_iters.max(1)) as u8;
+        on_progress(percent);
     }
 
     if exact.has_candidates() {
@@ -92,10 +104,14 @@ pub fn from_target(
 fn build_result(
     stats: &NoteStats,
     input: &ReverseInput,
-    bucket: CandidateBucket,
+    mut bucket: CandidateBucket,
     exact_candidate_count: usize,
     include_all: bool,
 ) -> ReverseResult {
+    // 展示全部模式：收集阶段未排序，此处统一排序
+    if include_all {
+        bucket.top.sort_by(compare_candidates);
+    }
     let candidates = bucket.top;
     let top = candidates
         .first()
@@ -378,12 +394,18 @@ fn push_candidate(
     candidate: ReverseCandidate,
     include_all: bool,
 ) {
+    // 展示全部模式：只收集，最后统一排序（避免 Vec::insert O(n²)）
+    if include_all {
+        candidates.push(candidate);
+        return;
+    }
+
     let idx = candidates
         .binary_search_by(|current| compare_candidates(current, &candidate))
         .unwrap_or_else(|i| i);
     candidates.insert(idx, candidate);
 
-    if !include_all && candidates.len() > DEFAULT_REVERSE_SOLUTIONS {
+    if candidates.len() > DEFAULT_REVERSE_SOLUTIONS {
         candidates.pop();
     }
 }
@@ -455,7 +477,7 @@ mod tests {
     #[test]
     fn miss_variants_share_score_and_conserve_counts() {
         let stats = test_stats();
-        let result = from_target(&stats, &reverse_input(950_000), true, 0.0).unwrap();
+        let result = from_target(&stats, &reverse_input(950_000), true, 0.0, |_| {}).unwrap();
 
         assert!(!result.candidates.is_empty(), "应至少有一个方案");
 

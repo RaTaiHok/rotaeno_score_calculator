@@ -108,6 +108,8 @@ const {
   reverseFilter,
   reverseAllFromScore,
   reverseFromScore,
+  reverseLoading,
+  reverseProgress,
   reverseResultText,
   selectedChart,
   selectedDifficulty,
@@ -177,6 +179,18 @@ function handleClear() {
     @clear="handleClear"
     @remove="removeEntry"
   />
+
+  <!-- 反算计算中遮罩：转圈 + 进度百分比 -->
+  <Transition name="modal">
+    <div v-if="reverseLoading" class="reverse-overlay">
+      <div class="reverse-spinner"></div>
+      <div class="reverse-text">正在反算...</div>
+      <div class="reverse-progress-track">
+        <div class="reverse-progress-fill" :style="{ width: reverseProgress + '%' }"></div>
+      </div>
+      <div class="reverse-percent">{{ reverseProgress }}%</div>
+    </div>
+  </Transition>
 
   <AboutDialog
     :visible="showAbout"

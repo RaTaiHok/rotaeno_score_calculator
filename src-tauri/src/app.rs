@@ -1,7 +1,7 @@
 use crate::calc;
 use crate::model::{
-    DataUpdateInfo, DifficultyOption, NoteStats, ReverseInput, ReverseResult, ScoreInput, ScoreResult,
-    SongDataFile, SongEntry, SongSummary,
+    DataUpdateInfo, DifficultyOption, NoteStats, ReverseInput, ReverseProgress, ReverseResult,
+    ScoreInput, ScoreResult, SongDataFile, SongEntry, SongSummary,
 };
 use std::fs;
 use std::io::Read;
@@ -132,23 +132,50 @@ pub fn calculate_score(
 }
 
 #[tauri::command]
-pub fn reverse_from_score(
+pub async fn reverse_from_score(
     input: ReverseInput,
+    on_progress: tauri::ipc::Channel<ReverseProgress>,
     state: State<'_, AppState>,
 ) -> Result<ReverseResult, String> {
-    let songs = state.songs.read().map_err(|e| format!("{e}"))?;
-    let stats = find_stats_in(&songs, &input.song_id, &input.difficulty)?;
-    calc::reverse_from_target(stats, &input)
+    let songs = state
+        .songs
+        .read()
+        .map_err(|e| format!("{e}"))?
+        .clone();
+    let stats = find_stats_in(&songs, &input.song_id, &input.difficulty)?.clone();
+
+    // 重计算放到 blocking 线程池，避免阻塞 UI 线程
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut progress = |percent: u8| {
+            let _ = on_progress.send(ReverseProgress { percent });
+        };
+        calc::reverse_from_target(&stats, &input, &mut progress)
+    })
+    .await
+    .map_err(|e| format!("计算任务异常: {e}"))?
 }
 
 #[tauri::command]
-pub fn reverse_all_from_score(
+pub async fn reverse_all_from_score(
     input: ReverseInput,
+    on_progress: tauri::ipc::Channel<ReverseProgress>,
     state: State<'_, AppState>,
 ) -> Result<ReverseResult, String> {
-    let songs = state.songs.read().map_err(|e| format!("{e}"))?;
-    let stats = find_stats_in(&songs, &input.song_id, &input.difficulty)?;
-    calc::reverse_all_from_target(stats, &input)
+    let songs = state
+        .songs
+        .read()
+        .map_err(|e| format!("{e}"))?
+        .clone();
+    let stats = find_stats_in(&songs, &input.song_id, &input.difficulty)?.clone();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut progress = |percent: u8| {
+            let _ = on_progress.send(ReverseProgress { percent });
+        };
+        calc::reverse_all_from_target(&stats, &input, &mut progress)
+    })
+    .await
+    .map_err(|e| format!("计算任务异常: {e}"))?
 }
 
 #[tauri::command]

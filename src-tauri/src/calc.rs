@@ -38,15 +38,17 @@ pub fn calculate_score(stats: &NoteStats, input: &ScoreInput) -> Result<ScoreRes
 pub fn reverse_from_target(
     stats: &NoteStats,
     input: &ReverseInput,
+    on_progress: impl FnMut(u8),
 ) -> Result<ReverseResult, String> {
-    reverse::from_target(stats, input, false, input.min_played_ratio)
+    reverse::from_target(stats, input, false, input.min_played_ratio, on_progress)
 }
 
 pub fn reverse_all_from_target(
     stats: &NoteStats,
     input: &ReverseInput,
+    on_progress: impl FnMut(u8),
 ) -> Result<ReverseResult, String> {
-    reverse::from_target(stats, input, true, input.min_played_ratio)
+    reverse::from_target(stats, input, true, input.min_played_ratio, on_progress)
 }
 
 pub fn validate_input_counts(stats: &NoteStats, input: &ScoreInput) -> Result<(), String> {

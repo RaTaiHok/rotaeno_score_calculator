@@ -37,6 +37,8 @@ export function useScoreCalculator(onResult = null) {
   const errorMessage = ref("");
   const calcResultText = ref(EMPTY_RESULT);
   const reverseResultText = ref(EMPTY_RESULT);
+  const reverseLoading = ref(false);
+  const reverseProgress = ref(0);
   const judgement = reactive(createEmptyJudgement());
   const reverseFilter = reactive({
     allow_perfect_plus: true,
@@ -171,21 +173,32 @@ export function useScoreCalculator(onResult = null) {
       return;
     }
 
+    reverseLoading.value = true;
+    reverseProgress.value = 0;
+
     try {
       clearError();
       const request = includeAll ? requestReverseAllFromScore : requestReverseFromScore;
-      const result = await request({
-        song_id: selectedSongId.value,
-        difficulty: selectedDifficulty.value,
-        target_score: Math.max(0, toInt(targetScore.value)),
-        ...createReverseFilterInput()
-      });
+      const result = await request(
+        {
+          song_id: selectedSongId.value,
+          difficulty: selectedDifficulty.value,
+          target_score: Math.max(0, toInt(targetScore.value)),
+          ...createReverseFilterInput()
+        },
+        (msg) => {
+          reverseProgress.value = Math.max(0, Math.min(100, Number(msg?.percent ?? 0)));
+        }
+      );
 
       reverseResultText.value = formatReverseResult(result);
       applyJudgement(result.judgement);
       saveEntry(includeAll ? "reverse-all" : "reverse", reverseResultText.value);
     } catch (error) {
       setError(error);
+    } finally {
+      reverseLoading.value = false;
+      reverseProgress.value = 0;
     }
   }
 
@@ -312,6 +325,8 @@ export function useScoreCalculator(onResult = null) {
     reverseFilter,
     reverseAllFromScore,
     reverseFromScore,
+    reverseLoading,
+    reverseProgress,
     reverseResultText,
     selectedChart,
     selectedDifficulty,

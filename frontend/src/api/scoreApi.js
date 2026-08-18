@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 
 export function listSongs() {
   return invoke("list_songs");
@@ -12,12 +12,28 @@ export function calculateScore(input) {
   return invoke("calculate_score", { input });
 }
 
-export function reverseFromScore(input) {
-  return invoke("reverse_from_score", { input });
+export function reverseFromScore(input, onProgress) {
+  return invoke("reverse_from_score", {
+    input,
+    onProgress: createProgressChannel(onProgress)
+  });
 }
 
-export function reverseAllFromScore(input) {
-  return invoke("reverse_all_from_score", { input });
+export function reverseAllFromScore(input, onProgress) {
+  return invoke("reverse_all_from_score", {
+    input,
+    onProgress: createProgressChannel(onProgress)
+  });
+}
+
+function createProgressChannel(onProgress) {
+  const channel = new Channel();
+  channel.onmessage = (msg) => {
+    if (onProgress) {
+      onProgress(msg);
+    }
+  };
+  return channel;
 }
 
 export function checkDataUpdate() {

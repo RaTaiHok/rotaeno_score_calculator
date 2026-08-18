@@ -572,6 +572,63 @@ pre {
   transform: translateX(100%);
 }
 
+/* ===== Reverse计算中遮罩 ===== */
+.reverse-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.reverse-spinner {
+  width: 44px;
+  height: 44px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: reverse-spin 0.8s linear infinite;
+}
+
+@keyframes reverse-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.reverse-text {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.reverse-progress-track {
+  width: min(260px, 70vw);
+  height: 8px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.reverse-progress-fill {
+  height: 100%;
+  background: #fff;
+  border-radius: 999px;
+  transition: width 0.15s ease-out;
+}
+
+.reverse-percent {
+  color: #fff;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
 /* ===== About Dialog ===== */
 .about-overlay {
   position: fixed;

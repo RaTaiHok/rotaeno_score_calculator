@@ -234,6 +234,12 @@ pub struct DataUpdateInfo {
     pub error: Option<String>,
 }
 
+/// 反算进度消息：由 Rust 计算线程通过 Channel 推送给前端
+#[derive(Debug, Clone, Serialize)]
+pub struct ReverseProgress {
+    pub percent: u8,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ReverseResult {
     pub song_id: String,
