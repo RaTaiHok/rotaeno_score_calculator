@@ -9,10 +9,23 @@ on:
 
 jobs:
   # ============================================================
-  #  Windows — 仅 Portable exe
+  #  Windows — 多架构 Portable exe（x64 / x86 / arm64）
   # ============================================================
   build-windows:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows64x
+            target: x86_64-pc-windows-msvc
+            arch: x64
+          - name: Windows32x
+            target: i686-pc-windows-msvc
+            arch: x86
+          - name: Windowsarm64
+            target: aarch64-pc-windows-msvc
+            arch: arm64
     steps:
       - uses: actions/checkout@v4
 
@@ -23,6 +36,14 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # 配置对应架构的 MSVC 工具链（x86/arm64 默认不预装，link.exe + LIB 环境变量）
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli
@@ -33,19 +54,19 @@ jobs:
 
       # --no-bundle: 只产出便携版 exe，不构建 NSIS 安装包
       - name: Build portable exe
-        run: cargo tauri build --no-bundle
+        run: cargo tauri build --no-bundle --target ${{ matrix.target }}
 
       - name: Package zip
         shell: powershell
         run: |
-          Copy-Item target/release/rotaeno_score_calc.exe "$env:RUNNER_TEMP\Rotaeno_Score_Calc.exe"
-          Compress-Archive -Path "$env:RUNNER_TEMP\Rotaeno_Score_Calc.exe" -DestinationPath "$env:RUNNER_TEMP\Rotaeno_Score_Calc-Windows64x.zip" -Force
+          Copy-Item "target/${{ matrix.target }}/release/rotaeno_score_calc.exe" "$env:RUNNER_TEMP/Rotaeno_Score_Calc.exe"
+          Compress-Archive -Path "$env:RUNNER_TEMP/Rotaeno_Score_Calc.exe" -DestinationPath "$env:RUNNER_TEMP/Rotaeno_Score_Calc-${{ matrix.name }}.zip" -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Rotaeno_Score_Calc-Windows64x
-          path: ${{ runner.temp }}/Rotaeno_Score_Calc-Windows64x.zip
+          name: Rotaeno_Score_Calc-${{ matrix.name }}
+          path: ${{ runner.temp }}/Rotaeno_Score_Calc-${{ matrix.name }}.zip
           if-no-files-found: error
 
   # ============================================================
