@@ -26,10 +26,11 @@ document.addEventListener("gestureend", (e) => e.preventDefault());
 
 // Dynamically measure safe-area-inset-top and set --status-bar-height CSS variable.
 // On PC: env() returns 0 → no padding needed.
-// On iOS: env() returns the actual inset → use it.
+// On iOS (with viewport-fit=cover): env() returns the actual inset → use it.
 // On Android WebView: env() may return 0 despite the status bar → fall back to 24dp * DPR.
 function applyMobileAdaptations() {
   const isAndroid = /android/i.test(navigator.userAgent);
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
   // --- Status bar height ---
   const probe = document.createElement("div");
@@ -44,6 +45,10 @@ function applyMobileAdaptations() {
   } else if (isAndroid) {
     const dpr = window.devicePixelRatio || 1;
     document.documentElement.style.setProperty("--status-bar-height", `${Math.round(24 * dpr)}px`);
+  } else if (isIOS) {
+    // env() 未生效时的兑底（如旧版 WebView / 缺失 viewport-fit=cover）。
+    // 无刘海机型约 20pt，刘海机型约 47pt，取 44 折中（多余部分为深色 header 背景）。
+    document.documentElement.style.setProperty("--status-bar-height", "44px");
   }
   // PC: leave --status-bar-height unset (defaults to 0px in CSS)
 
