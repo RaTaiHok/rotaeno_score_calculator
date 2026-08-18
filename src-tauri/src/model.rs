@@ -201,6 +201,16 @@ impl ReverseJudgementFilter {
     }
 }
 
+/// 同一个反算方案（同一分数）下，Miss 在 Slide / 非Slide 之间的一种分配情况。
+/// 反算时 Good 与 Slide Hit 权重相同（均 101），无法区分，因此需要分情况展示。
+#[derive(Debug, Clone, Serialize)]
+pub struct MissVariant {
+    pub non_slide_good: u32,
+    pub non_slide_miss: u32,
+    pub slide_hit: u32,
+    pub slide_miss: u32,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ReverseCandidateResult {
     pub matched_score: u32,
@@ -208,7 +218,10 @@ pub struct ReverseCandidateResult {
     pub exact_match: bool,
     pub score_factor: f64,
     pub raw_score: f64,
+    /// 主判定分布（取 Good 最少 / Slide Hit 最多的代表变体）
     pub judgement: JudgementBreakdown,
+    /// 分情况：该方案所有可能的 Miss 分配变体
+    pub miss_variants: Vec<MissVariant>,
 }
 
 #[derive(Debug, Clone, Serialize)]

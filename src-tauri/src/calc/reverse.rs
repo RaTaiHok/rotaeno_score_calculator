@@ -2,8 +2,8 @@ use std::cmp::Ordering;
 
 use crate::calc::math::{exact_p_range, nearest_p_probes, ScoreMath};
 use crate::model::{
-    JudgementBreakdown, NoteStats, ReverseCandidateResult, ReverseInput, ReverseJudgementFilter,
-    ReverseResult,
+    JudgementBreakdown, MissVariant, NoteStats, ReverseCandidateResult, ReverseInput,
+    ReverseJudgementFilter, ReverseResult,
 };
 
 const DEFAULT_REVERSE_SOLUTIONS: usize = 3;
@@ -176,47 +176,37 @@ impl CandidateBucket {
     }
 
     fn push_eval(&mut self, eval: &TupleEval, filter: ReverseJudgementFilter, min_played_ratio: f64) {
-        let accepted = candidates_from_eval(eval, self.include_all, filter, min_played_ratio);
-        if accepted.is_empty() {
+        let Some(candidate) = candidates_from_eval(eval, filter, min_played_ratio) else {
             return;
-        }
+        };
 
-        self.count += accepted.len();
-        for candidate in accepted {
-            push_candidate(&mut self.top, candidate, self.include_all);
-        }
+        self.count += 1;
+        push_candidate(&mut self.top, candidate, self.include_all);
     }
 
     fn push_nearest_eval(&mut self, eval: &TupleEval, filter: ReverseJudgementFilter, min_played_ratio: f64) {
-        let accepted = candidates_from_eval(eval, self.include_all, filter, min_played_ratio);
-        if accepted.is_empty() {
+        let Some(candidate) = candidates_from_eval(eval, filter, min_played_ratio) else {
             return;
-        }
+        };
 
         let abs_diff = eval.difference.abs();
 
         match self.nearest_abs_diff {
             None => {
                 self.nearest_abs_diff = Some(abs_diff);
-                self.count = accepted.len();
+                self.count = 1;
                 self.top.clear();
-                for candidate in accepted {
-                    push_candidate(&mut self.top, candidate, self.include_all);
-                }
+                push_candidate(&mut self.top, candidate, self.include_all);
             }
             Some(current_best) if abs_diff < current_best => {
                 self.nearest_abs_diff = Some(abs_diff);
-                self.count = accepted.len();
+                self.count = 1;
                 self.top.clear();
-                for candidate in accepted {
-                    push_candidate(&mut self.top, candidate, self.include_all);
-                }
+                push_candidate(&mut self.top, candidate, self.include_all);
             }
             Some(current_best) if abs_diff == current_best => {
-                self.count += accepted.len();
-                for candidate in accepted {
-                    push_candidate(&mut self.top, candidate, self.include_all);
-                }
+                self.count += 1;
+                push_candidate(&mut self.top, candidate, self.include_all);
             }
             Some(_) => {}
         }
@@ -231,7 +221,7 @@ struct TupleEval {
     remaining_non_slide: u32,
     slide_total: u32,
     g_min: u32,
-    g_count: usize,
+    g_max: u32,
     score_factor: f64,
     raw_score: f64,
     matched_score: u32,
@@ -272,7 +262,7 @@ impl TupleEval {
             remaining_non_slide,
             slide_total,
             g_min,
-            g_count: (g_max - g_min + 1) as usize,
+            g_max,
             score_factor: score_parts.score_factor,
             raw_score: score_parts.raw_score,
             matched_score: score_parts.display_score,
@@ -296,6 +286,7 @@ impl TupleEval {
                 slide_miss,
                 non_slide_unplayed,
             },
+            miss_variants: Vec::new(),
             score_factor: self.score_factor,
             raw_score: self.raw_score,
             matched_score: self.matched_score,
@@ -308,6 +299,8 @@ impl TupleEval {
 #[derive(Debug, Clone)]
 struct ReverseCandidate {
     judgement: JudgementBreakdown,
+    /// 该方案下所有可能的 Miss 分配变体（Good/SlideHit 拆分 → 对应的 Miss 分布）
+    miss_variants: Vec<MissVariant>,
     score_factor: f64,
     raw_score: f64,
     matched_score: u32,
@@ -324,27 +317,27 @@ impl ReverseCandidate {
             score_factor: self.score_factor,
             raw_score: self.raw_score,
             judgement: self.judgement.clone(),
+            miss_variants: self.miss_variants.clone(),
         }
     }
 }
 
+/// 将一个 (P+, P, h) 元组转换为一个反算方案：
+/// 枚举 h 在 Good / SlideHit 之间的所有拆分（g ∈ [g_min, g_max]），
+/// 每种拆分对应一种 Miss 分配（non_slide_miss / slide_miss）。
+/// 分数相同，但 Miss 在 Slide/非Slide 之间分配不同，因此全部保留为变体。
 fn candidates_from_eval(
     eval: &TupleEval,
-    include_all: bool,
     filter: ReverseJudgementFilter,
     min_played_ratio: f64,
-) -> Vec<ReverseCandidate> {
-    let non_slide_total = eval.remaining_non_slide + eval.non_slide_perfect_plus + eval.non_slide_perfect;
-    let local_keep = if include_all {
-        eval.g_count
-    } else {
-        eval.g_count.min(DEFAULT_REVERSE_SOLUTIONS)
-    };
+) -> Option<ReverseCandidate> {
+    let non_slide_total =
+        eval.remaining_non_slide + eval.non_slide_perfect_plus + eval.non_slide_perfect;
 
-    let mut candidates = Vec::with_capacity(local_keep);
-    for offset in 0..local_keep {
-        // Iterate from g_min upward: prefer fewer G (more realistic)
-        let g = eval.g_min + offset as u32;
+    let mut miss_variants: Vec<MissVariant> = Vec::new();
+    let mut primary: Option<ReverseCandidate> = None;
+
+    for g in eval.g_min..=eval.g_max {
         let candidate = eval.to_candidate(g, 0);
 
         // Filter by min_played_ratio: skip candidates with too few played notes
@@ -360,12 +353,24 @@ fn candidates_from_eval(
             }
         }
 
-        if filter.allows(&candidate.judgement) {
-            candidates.push(candidate);
+        if !filter.allows(&candidate.judgement) {
+            continue;
         }
+
+        if primary.is_none() {
+            primary = Some(candidate.clone());
+        }
+        miss_variants.push(MissVariant {
+            non_slide_good: candidate.judgement.non_slide_good,
+            non_slide_miss: candidate.judgement.non_slide_miss,
+            slide_hit: candidate.judgement.slide_hit,
+            slide_miss: candidate.judgement.slide_miss,
+        });
     }
 
-    candidates
+    let mut candidate = primary?;
+    candidate.miss_variants = miss_variants;
+    Some(candidate)
 }
 
 fn push_candidate(
@@ -416,4 +421,98 @@ fn ratio_on_played(j: &JudgementBreakdown) -> f64 {
         return 0.0;
     }
     j.non_slide_perfect_plus as f64 / played as f64
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::NoteStats;
+
+    fn test_stats() -> NoteStats {
+        NoteStats {
+            tap: 50,
+            flick: 20,
+            slide: 10,
+            catch: 10,
+            rotate: 0,
+            total: 90,
+        }
+    }
+
+    fn reverse_input(target_score: u32) -> ReverseInput {
+        ReverseInput {
+            song_id: "test".into(),
+            difficulty: "IV".into(),
+            target_score,
+            allow_perfect_plus: true,
+            allow_perfect: true,
+            allow_good: true,
+            allow_miss: true,
+            min_played_ratio: 0.0,
+        }
+    }
+
+    #[test]
+    fn miss_variants_share_score_and_conserve_counts() {
+        let stats = test_stats();
+        let result = from_target(&stats, &reverse_input(950_000), true, 0.0).unwrap();
+
+        assert!(!result.candidates.is_empty(), "应至少有一个方案");
+
+        let math = ScoreMath::new(&stats);
+        for c in &result.candidates {
+            assert!(!c.miss_variants.is_empty(), "每个方案都应有 Miss 变体");
+            assert!(
+                c.miss_variants.len() >= 1,
+                "Good/SlideHit 可拆分时应有多个 Miss 分配"
+            );
+
+            let mut saw_different_miss_split = false;
+            for v in &c.miss_variants {
+                // 总数守恒
+                let non_slide_sum = c.judgement.non_slide_perfect_plus
+                    + c.judgement.non_slide_perfect
+                    + v.non_slide_good
+                    + v.non_slide_miss;
+                assert_eq!(non_slide_sum, stats.non_slide_total(), "非Slide 总数守恒");
+                assert_eq!(v.slide_hit + v.slide_miss, stats.slide, "Slide 总数守恒");
+
+                // 重建分数：变体分数必须等于方案分数
+                let jb = JudgementBreakdown {
+                    non_slide_perfect_plus: c.judgement.non_slide_perfect_plus,
+                    non_slide_perfect: c.judgement.non_slide_perfect,
+                    non_slide_good: v.non_slide_good,
+                    non_slide_miss: v.non_slide_miss,
+                    slide_hit: v.slide_hit,
+                    slide_miss: v.slide_miss,
+                    non_slide_unplayed: 0,
+                };
+                assert_eq!(math.from_judgement(&jb).display_score, c.matched_score);
+
+                // 总 Miss 数也应一致（Miss 不计分）
+                let total_miss = v.non_slide_miss + v.slide_miss;
+                assert_eq!(
+                    total_miss,
+                    c.judgement.non_slide_miss + c.judgement.slide_miss,
+                    "总 Miss 数不变"
+                );
+
+                if c.miss_variants.len() > 1 {
+                    let first = &c.miss_variants[0];
+                    if v.non_slide_miss != first.non_slide_miss
+                        || v.slide_miss != first.slide_miss
+                    {
+                        saw_different_miss_split = true;
+                    }
+                }
+            }
+
+            if c.miss_variants.len() > 1 {
+                assert!(
+                    saw_different_miss_split,
+                    "存在多个变体时应包含不同的 Miss 分配"
+                );
+            }
+        }
+    }
 }

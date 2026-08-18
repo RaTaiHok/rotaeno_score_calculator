@@ -31,6 +31,14 @@ export function formatReverseResult(result) {
     const unplayed = candidate.judgement.non_slide_unplayed || 0;
     const totalMiss = (candidate.judgement.non_slide_miss || 0) + (candidate.judgement.slide_miss || 0);
 
+    // 分情况：同一方案（同一分数）下 Miss 在 Slide/非Slide 之间的所有分配可能
+    const variants = Array.isArray(candidate.miss_variants) ? candidate.miss_variants : [];
+    const variantLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const variantLines = variants.map((v, i) => {
+      const label = i < variantLabels.length ? variantLabels[i] : String(i + 1);
+      return `      ${label}) 非Slide G ${formatInt(v.non_slide_good)} | Slide Hit ${formatInt(v.slide_hit)} | 非Slide Miss ${formatInt(v.non_slide_miss)} | Slide Miss ${formatInt(v.slide_miss)}`;
+    });
+
     const lines = [
       `[${index + 1}] 方案分数 ${formatInt(candidate.matched_score)} (差值 ${diffSign}${candidate.difference}) | P+比率: ${pPlusRatio}% | 总Miss: ${formatInt(totalMiss)}`,
       `  - 非Slide P+: ${formatInt(pPlus)}`,
@@ -40,6 +48,11 @@ export function formatReverseResult(result) {
       `  - Slide Hit: ${formatInt(candidate.judgement.slide_hit)}`,
       `  - Slide Miss: ${formatInt(candidate.judgement.slide_miss)}`
     ];
+
+    if (variants.length > 1) {
+      lines.push(`  - Miss 分配（${formatInt(variants.length)} 种可能）:`);
+      lines.push(...variantLines);
+    }
 
     if (unplayed > 0) {
       lines.push(`  - 未游玩: ${formatInt(unplayed)}`);
