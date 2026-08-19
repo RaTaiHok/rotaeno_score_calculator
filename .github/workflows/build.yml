@@ -74,8 +74,10 @@ jobs:
           fi
           echo "VS installation: $VS_PATH"
           VCVARS="$VS_PATH/VC/Auxiliary/Build/vcvarsall.bat"
+          # 用 printf 生成批处理，避免 cmd //c 的引号转义问题
+          printf '@echo off\r\ncall "%s" %s >nul 2>&1\r\nif errorlevel 1 exit /b 1\r\necho PATH=%%PATH%%\r\necho LIB=%%LIB%%\r\necho INCLUDE=%%INCLUDE%%\r\n' "$VCVARS" "$ARCH" > "$RUNNER_TEMP/setenv.cmd"
           ENV_FILE="$RUNNER_TEMP/vcvars.env"
-          cmd //c "call \"$VCVARS\" $ARCH >nul 2>&1 && set" > "$ENV_FILE" 2>/dev/null
+          cmd //c "$(cygpath -w "$RUNNER_TEMP")/setenv.cmd" > "$ENV_FILE" 2>/dev/null
           if [ ! -s "$ENV_FILE" ]; then
             echo "ERROR: vcvarsall failed for arch=$ARCH"
             exit 1
@@ -89,6 +91,9 @@ jobs:
           done < "$ENV_FILE"
           echo "MSVC environment configured (arch=$ARCH)"
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm install
@@ -96,7 +101,7 @@ jobs:
       # --no-bundle: 只产出便携版 exe，不构建 NSIS 安装包
       - name: Build portable exe
         shell: bash
-        run: npx --yes @tauri-apps/cli@2 build --no-bundle --target ${{ matrix.target }}
+        run: cargo tauri build --no-bundle --target ${{ matrix.target }}
 
       - name: Package zip
         shell: powershell
@@ -132,6 +137,9 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm install
@@ -145,7 +153,7 @@ jobs:
         run: rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
 
       - name: Tauri Android init
-        run: npx --yes @tauri-apps/cli@2 android init
+        run: cargo tauri android init
 
       - name: Fix generated files
         run: |
@@ -162,7 +170,7 @@ jobs:
 
       # 编译 Rust .so + 前端 + 由 tauri 内部 gradle 打包（此阶段签名可能不生效，无妨）
       - name: Build Android (tauri)
-        run: npx --yes @tauri-apps/cli@2 android build
+        run: cargo tauri android build
 
       # 签名配置放在 build 之后、gradlew 打包之前，确保不被 tauri 重新生成覆盖
       - name: Configure Android signing
@@ -267,15 +275,18 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm install
 
       - name: Generate iOS Xcode project
-        run: npx --yes @tauri-apps/cli@2 ios init
+        run: cargo tauri ios init
 
       - name: Build unsigned IPA
-        run: npx --yes @tauri-apps/cli@2 ios build --no-sign --ci
+        run: cargo tauri ios build --no-sign --ci
 
       - name: Ad-hoc sign and package IPA
         run: |
@@ -354,13 +365,16 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm install
 
       # --bundles app: 只生成 .app（不生成 dmg）
       - name: Build macOS app
-        run: npx --yes @tauri-apps/cli@2 build --bundles app
+        run: cargo tauri build --bundles app
 
       # Apple Silicon 要求 arm64 可执行文件有签名；无开发者证书时 ad-hoc 签名保证可运行
       - name: Ad-hoc codesign
@@ -412,12 +426,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm install
 
       - name: Build Linux package
-        run: npx --yes @tauri-apps/cli@2 build --bundles deb
+        run: cargo tauri build --bundles deb
 
       - name: Package zip
         run: |
