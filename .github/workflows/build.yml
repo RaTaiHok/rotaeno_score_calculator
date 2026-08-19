@@ -53,8 +53,20 @@ jobs:
         run: npm install
 
       # --no-bundle: 只产出便携版 exe，不构建 NSIS 安装包
+      # 显式指定 MSVC 的 link.exe（避免 Git Bash 的 link.exe 抢先导致链接失败）
       - name: Build portable exe
-        run: cargo tauri build --no-bundle --target ${{ matrix.target }}
+        shell: bash
+        run: |
+          VS_LINK=$(ls "/c/Program Files/Microsoft Visual Studio/2022"/*/VC/Tools/MSVC/*/bin/Hostx64/${{ matrix.arch }}/link.exe 2>/dev/null | head -1)
+          if [ -z "$VS_LINK" ]; then
+            echo "ERROR: MSVC link.exe not found for arch=${{ matrix.arch }}"
+            ls "/c/Program Files/Microsoft Visual Studio/2022"/*/VC/Tools/MSVC/*/bin/Hostx64/ 2>/dev/null || true
+            exit 1
+          fi
+          echo "MSVC link.exe: $VS_LINK"
+          TARGET_UPPER=$(echo "${{ matrix.target }}" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+          export "CARGO_TARGET_${TARGET_UPPER}_LINKER=$VS_LINK"
+          cargo tauri build --no-bundle --target ${{ matrix.target }}
 
       - name: Package zip
         shell: powershell
@@ -132,27 +144,27 @@ jobs:
           if [ -n "${ANDROID_KEYSTORE_B64:-}" ]; then
             echo "使用 GitHub Secrets 中的正式 keystore"
             echo "$ANDROID_KEYSTORE_B64" | base64 -d > src-tauri/nekoRTHsama.jks
-            cat > "$APP_DIR/keystore.properties" <<EOF
-            storeFile=../../../nekoRTHsama.jks
-            storePassword=${ANDROID_KEYSTORE_PASSWORD}
-            keyAlias=${ANDROID_KEY_ALIAS}
-            keyPassword=${ANDROID_KEY_PASSWORD}
-            v1SigningEnabled=true
-            v2SigningEnabled=true
-            v3SigningEnabled=true
-            EOF
+            {
+              echo "storeFile=../../../nekoRTHsama.jks"
+              echo "storePassword=${ANDROID_KEYSTORE_PASSWORD}"
+              echo "keyAlias=${ANDROID_KEY_ALIAS}"
+              echo "keyPassword=${ANDROID_KEY_PASSWORD}"
+              echo "v1SigningEnabled=true"
+              echo "v2SigningEnabled=true"
+              echo "v3SigningEnabled=true"
+            } > "$APP_DIR/keystore.properties"
           else
             echo "未配置 secrets.ANDROID_KEYSTORE_B64，生成临时 keystore（仅保证可安装）"
             keytool -genkey -v -keystore "$APP_DIR/release.jks" -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias release -dname "CN=CI Build, O=Rotaeno, C=CN" -storepass rotaeno123 -keypass rotaeno123 2>/dev/null
-            cat > "$APP_DIR/keystore.properties" <<EOF
-            storeFile=release.jks
-            storePassword=rotaeno123
-            keyAlias=release
-            keyPassword=rotaeno123
-            v1SigningEnabled=true
-            v2SigningEnabled=true
-            v3SigningEnabled=true
-            EOF
+            {
+              echo "storeFile=release.jks"
+              echo "storePassword=rotaeno123"
+              echo "keyAlias=release"
+              echo "keyPassword=rotaeno123"
+              echo "v1SigningEnabled=true"
+              echo "v2SigningEnabled=true"
+              echo "v3SigningEnabled=true"
+            } > "$APP_DIR/keystore.properties"
           fi
           echo "keystore.properties:"
           cat "$APP_DIR/keystore.properties"
