@@ -3,7 +3,7 @@
   "bundle": {
     "android": {
       "minSdkVersion": 24,
-      "autoIncrementVersionCode": true
+      "versionCode": 3000
     }
   }
 }
