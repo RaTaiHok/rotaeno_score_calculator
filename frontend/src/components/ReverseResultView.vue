@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { formatInt } from "../utils/number";
 
@@ -18,11 +18,22 @@ const emit = defineEmits(["apply-candidate"]);
 
 // 每个方案判定组合默认展示条数
 const COMBO_PREVIEW = 5;
+// “展示全部”模式：方案分页加载步长
+const VISIBLE_STEP = 10;
 // 方案内展开超出的组合
 const expandedCombos = ref({});
 const copiedIdx = ref(-1);
 const copyTimer = ref(null);
 const copiedAll = ref(false);
+const visibleCount = ref(VISIBLE_STEP);
+
+// 结果变化时重置分页
+watch(
+  () => props.result,
+  () => {
+    visibleCount.value = VISIBLE_STEP;
+  }
+);
 
 function fmt(value) {
   return formatInt(value);
@@ -39,6 +50,18 @@ function totalMiss(judgement) {
 
 function candidates() {
   return Array.isArray(props.result.candidates) ? props.result.candidates : [];
+}
+
+function visibleCandidates() {
+  return candidates().slice(0, visibleCount.value);
+}
+
+function hasMore() {
+  return visibleCount.value < candidates().length;
+}
+
+function loadMore() {
+  visibleCount.value += VISIBLE_STEP;
 }
 
 function combosOf(candidate) {
@@ -189,7 +212,7 @@ const variantLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     </div>
 
     <div
-      v-for="(c, i) in candidates()"
+      v-for="(c, i) in visibleCandidates()"
       :key="i"
       class="scheme-block"
     >
@@ -245,6 +268,12 @@ const variantLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
           {{ expandedCombos[candidateIdx(c)] ? "收起" : `…共 ${fmt(comboTotal(c))} 种，展开` }}
         </button>
       </div>
+    </div>
+
+    <div v-if="hasMore()" class="load-more-wrap">
+      <button class="load-more-btn" @click="loadMore">
+        加载更多（已显示 {{ visibleCandidates().length }} / 共 {{ fmt(candidates().length) }} 个方案）
+      </button>
     </div>
 
     <div class="reverse-legend">
@@ -405,6 +434,26 @@ const variantLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 .combo-more:hover {
   text-decoration: underline;
+}
+
+.load-more-wrap {
+  text-align: center;
+  margin: 4px 0 10px;
+}
+
+.load-more-btn {
+  border: 1px solid #c8d0df;
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 22px;
+  font-size: 13px;
+  color: #5b7cfa;
+  cursor: pointer;
+}
+
+.load-more-btn:hover {
+  border-color: #5b7cfa;
+  background: #f4f7ff;
 }
 
 .reverse-legend {
