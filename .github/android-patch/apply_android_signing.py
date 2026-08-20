@@ -16,12 +16,10 @@ with open(path, encoding="utf-8") as f:
 
 changed = False
 
-# 1. 顶部插入 import + keystoreProperties 加载
+# 1. 顶部插入 keystoreProperties 加载（用全限定名，避免 import 位置限制）
 if "keystoreProperties" not in content:
     header = (
-        'import java.util.Properties\n'
-        '\n'
-        'val keystoreProperties = Properties()\n'
+        'val keystoreProperties = java.util.Properties()\n'
         'val keystorePropertiesFile = file("keystore.properties")\n'
         'if (keystorePropertiesFile.exists()) {\n'
         '    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }\n'
