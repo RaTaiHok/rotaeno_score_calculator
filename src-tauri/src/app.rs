@@ -109,7 +109,7 @@ pub fn get_song_difficulties(
 ) -> Result<Vec<DifficultyOption>, String> {
     let songs = state.songs.read().map_err(|e| format!("{e}"))?;
     let song = find_song_in(&songs, &song_id)
-        .ok_or_else(|| format!("未找到歌曲ID: {song_id}，请检查歌曲数据。"))?;
+        .ok_or_else(|| format!("未找到歌曲ID: {song_id}，请检查歌曲数据"))?;
 
     let mut options: Vec<DifficultyOption> = song
         .difficulties
@@ -398,11 +398,11 @@ fn find_stats_in<'a>(
     difficulty: &str,
 ) -> Result<&'a NoteStats, String> {
     let song =
-        find_song_in(songs, song_id).ok_or_else(|| format!("未找到歌曲ID: {song_id}，请检查输入。"))?;
+        find_song_in(songs, song_id).ok_or_else(|| format!("未找到歌曲ID: {song_id}，请检查输入"))?;
 
     song.difficulties
         .get(difficulty)
-        .ok_or_else(|| format!("歌曲 {song_id} 不存在难度 {difficulty}。"))
+        .ok_or_else(|| format!("歌曲 {song_id} 不存在难度 {difficulty}"))
 }
 
 fn difficulty_rank(name: &str) -> (u8, &str) {

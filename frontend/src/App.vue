@@ -91,6 +91,7 @@ async function handleResetData() {
 onMounted(initData);
 
 const {
+  applyJudgement,
   calcResultText,
   calculateScore,
   canOperate,
@@ -110,6 +111,7 @@ const {
   reverseFromScore,
   reverseLoading,
   reverseProgress,
+  reverseResult,
   reverseResultText,
   selectedChart,
   selectedDifficulty,
@@ -164,11 +166,13 @@ function handleClear() {
       :can-operate="canOperate"
       :error-message="errorMessage"
       :reverse-filter="reverseFilter"
+      :reverse-result="reverseResult"
       :reverse-result-text="reverseResultText"
       @calculate="calculateScore"
       @reverse="reverseFromScore"
       @reverse-all="reverseAllFromScore"
       @update-filter="updateReverseFilterField"
+      @apply-candidate="applyJudgement"
     />
   </main>
 
@@ -214,7 +218,7 @@ function handleClear() {
           <h3 style="margin:0 0 8px">需要联网下载数据</h3>
           <p style="margin:0 0 12px;font-size:13px;color:#b45309">{{ updateError }}</p>
           <p style="margin:0 0 16px;font-size:13px;color:#51607a">
-            应用首次启动需要联网下载谱面数据后才能使用。
+            应用首次启动需要联网下载谱面数据后才能使用
           </p>
           <div style="display:flex;gap:10px;justify-content:center">
             <el-button type="primary" :loading="updateLoading" @click="tryDownload">
@@ -248,7 +252,7 @@ function handleClear() {
             {{ updateError }}
           </p>
           <p style="margin:0 0 16px;font-size:13px;color:#51607a">
-            当前使用本地版本 <strong>{{ updateInfo?.local_version }}</strong>，你可以继续使用或稍后重试。
+            当前使用本地版本 <strong>{{ updateInfo?.local_version }}</strong>，你可以继续使用或稍后重试
           </p>
           <div style="display:flex;gap:10px;justify-content:center">
             <el-button @click="handleSkipUpdate">继续使用</el-button>

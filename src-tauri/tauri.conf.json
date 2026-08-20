@@ -43,9 +43,5 @@
     "resources": [
       "../data/all_song_note_stats.json"
     ]
-  },
-  "android": {
-    "minSdkVersion": 24,
-    "autoIncrementVersionCode": true
   }
 }

@@ -41,6 +41,7 @@ export function useScoreCalculator(onResult = null) {
   const errorMessage = ref("");
   const calcResultText = ref(EMPTY_RESULT);
   const reverseResultText = ref(EMPTY_RESULT);
+  const reverseResult = ref(null);
   const reverseLoading = ref(false);
   const reverseProgress = ref(0);
   const judgement = reactive(createEmptyJudgement());
@@ -214,6 +215,8 @@ export function useScoreCalculator(onResult = null) {
           };
 
       reverseResultText.value = formatReverseResult(displayed);
+      // 结构化结果（供表格组件渲染）
+      reverseResult.value = displayed;
       applyJudgement(full.judgement);
       // 计算历史缓存完整结果（全部方案），而非仅前 3
       saveEntry(includeAll ? "reverse-all" : "reverse", formatReverseResult(full));
@@ -251,8 +254,8 @@ export function useScoreCalculator(onResult = null) {
 
   function limitMessageToTop3(message) {
     return String(message ?? "")
-      .replace(/，当前展示全部方案。$/, "，仅展示前 3 个。")
-      .replace(/，仅展示前 \d+ 个。$/, "，仅展示前 3 个。");
+      .replace(/，当前展示全部方案$/, "，仅展示前 3 个")
+      .replace(/，仅展示前 \d+ 个$/, "，仅展示前 3 个");
   }
 
   function saveEntry(type, resultText) {
@@ -268,8 +271,33 @@ export function useScoreCalculator(onResult = null) {
       difficulty: selectedDifficulty.value,
       targetScore: type !== "calc" ? Math.max(0, toInt(targetScore.value)) : null,
       calcResult: type === "calc" ? resultText : null,
-      reverseResult: type !== "calc" ? resultText : null
+      reverseResult: type !== "calc" ? resultText : null,
+      reverseResultData: type !== "calc" ? buildCompactResult(reverseResult.value) : null
     });
+  }
+
+  // 历史存储的紧凑结构：只保留展示所需字段，控制 localStorage 体积
+  function buildCompactResult(result) {
+    if (!result) {
+      return null;
+    }
+    const list = Array.isArray(result.candidates) ? result.candidates : [];
+    return {
+      target_score: result.target_score,
+      matched_score: result.matched_score,
+      difference: result.difference,
+      exact_match: result.exact_match,
+      candidate_count: result.candidate_count,
+      exact_candidate_count: result.exact_candidate_count,
+      candidates: list.slice(0, 10).map((c) => ({
+        matched_score: c.matched_score,
+        difference: c.difference,
+        exact_match: c.exact_match,
+        judgement: c.judgement,
+        miss_variants: (c.miss_variants || []).slice(0, 5),
+        miss_variant_total: c.miss_variant_total ?? c.miss_variants?.length ?? 0
+      }))
+    };
   }
 
   function createScoreInput() {
@@ -331,6 +359,7 @@ export function useScoreCalculator(onResult = null) {
   function clearResults() {
     calcResultText.value = EMPTY_RESULT;
     reverseResultText.value = EMPTY_RESULT;
+    reverseResult.value = null;
   }
 
   function ensureChartSelected() {
@@ -380,6 +409,7 @@ export function useScoreCalculator(onResult = null) {
     reverseFromScore,
     reverseLoading,
     reverseProgress,
+    reverseResult,
     reverseResultText,
     selectedChart,
     selectedDifficulty,
@@ -389,6 +419,7 @@ export function useScoreCalculator(onResult = null) {
     songQuery,
     songs,
     targetScore,
+    applyJudgement,
     updateJudgementField,
     updateReverseFilterField
   };

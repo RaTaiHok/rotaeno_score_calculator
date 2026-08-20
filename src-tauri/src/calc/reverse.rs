@@ -101,7 +101,7 @@ pub fn from_target(
     } else if nearest.has_candidates() {
         Ok(build_result(stats, input, nearest, 0, include_all))
     } else {
-        Err("未找到符合当前判定筛选条件的可行分布，请放宽筛选后重试。".to_string())
+        Err("未找到符合当前判定筛选条件的可行分布，请放宽筛选后重试".to_string())
     };
 
     // 100% 与真正完成同步：build_result（排序、构造输出、序列化）之后才上报
@@ -128,12 +128,12 @@ fn build_result(
     let message = if top.exact_match {
         if include_all {
             format!(
-                "已找到 {} 个精确命中目标分数的方案，按 Miss数少、P+比率高、G数少 的优先级排序，当前展示全部方案。",
+                "已找到 {} 个精确命中目标分数的方案，按 Miss数少、P+比率高、G数少 的优先级排序，当前展示全部方案",
                 exact_candidate_count
             )
         } else {
             format!(
-                "已找到 {} 个精确命中目标分数的方案，按 Miss数少、P+比率高、G数少 的优先级排序，仅展示前 {} 个。",
+                "已找到 {} 个精确命中目标分数的方案，按 Miss数少、P+比率高、G数少 的优先级排序，仅展示前 {} 个",
                 exact_candidate_count,
                 candidates.len()
             )
@@ -141,13 +141,13 @@ fn build_result(
     } else {
         if include_all {
             format!(
-                "未找到精确命中方案，找到 {} 个与目标分数最接近的方案（绝对差值 {}），按 Miss数少、P+比率高、G数少 的优先级排序，当前展示全部方案。",
+                "未找到精确命中方案，找到 {} 个与目标分数最接近的方案（绝对差值 {}），按 Miss数少、P+比率高、G数少 的优先级排序，当前展示全部方案",
                 bucket.count,
                 top.difference.abs()
             )
         } else {
             format!(
-                "未找到精确命中方案，找到 {} 个与目标分数最接近的方案（绝对差值 {}），按 Miss数少、P+比率高、G数少 的优先级排序，仅展示前 {} 个。",
+                "未找到精确命中方案，找到 {} 个与目标分数最接近的方案（绝对差值 {}），按 Miss数少、P+比率高、G数少 的优先级排序，仅展示前 {} 个",
                 bucket.count,
                 top.difference.abs(),
                 candidates.len()

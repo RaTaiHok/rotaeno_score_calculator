@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import ReverseResultView from "./ReverseResultView.vue";
 
 const targetScore = defineModel("targetScore", { default: 1_000_000 });
 
@@ -21,54 +21,23 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  reverseResult: {
+    type: Object,
+    default: null
+  },
   reverseResultText: {
     type: String,
     default: "-"
   }
 });
 
-const emit = defineEmits(["calculate", "reverse", "reverse-all", "update-filter"]);
+const emit = defineEmits(["calculate", "reverse", "reverse-all", "update-filter", "apply-candidate"]);
 
 const windowWidth = ref(window.innerWidth);
 const onResize = () => { windowWidth.value = window.innerWidth; };
 const componentSize = computed(() => windowWidth.value <= 480 ? "large" : "default");
 onMounted(() => window.addEventListener("resize", onResize));
 onUnmounted(() => window.removeEventListener("resize", onResize));
-
-// --- 多平台复制（PC + Android）---
-const copied = ref(false);
-const copyTimer = ref(null);
-
-function flashCopied() {
-  copied.value = true;
-  if (copyTimer.value) {
-    clearTimeout(copyTimer.value);
-  }
-  copyTimer.value = setTimeout(() => {
-    copied.value = false;
-  }, 1500);
-}
-
-async function copyReverseResult() {
-  const text = props.reverseResultText;
-  if (!text || text === "-") {
-    return;
-  }
-
-  try {
-    // Tauri 环境：clipboard-manager 插件（跨平台）
-    await writeText(text);
-    flashCopied();
-  } catch {
-    try {
-      // 浏览器调试环境回退
-      await navigator.clipboard.writeText(text);
-      flashCopied();
-    } catch (err) {
-      console.error("复制失败:", err);
-    }
-  }
-}
 </script>
 
 <template>
@@ -127,25 +96,21 @@ async function copyReverseResult() {
               Miss/未判定
             </el-checkbox>
           </div>
-          <small>只选 Perfect+ 时，会自动允许 Miss/未判定用于表示未打到的 note。</small>
+          <small>只选 Perfect+ 时，会自动允许 Miss/未判定用于表示未打到的 note</small>
         </div>
       </div>
       <div class="reverse-actions">
         <el-button :size="componentSize" :disabled="!canOperate" @click="emit('reverse')">反算前三方案</el-button>
         <el-button :size="componentSize" :disabled="!canOperate" @click="emit('reverse-all')">展示全部</el-button>
       </div>
-      <div v-if="reverseResultText !== '-'" class="result">
+      <div v-if="reverseResult" class="result">
         <div class="result-header">
           <h3>反算结果</h3>
-          <el-button
-            size="small"
-            :type="copied ? 'success' : 'default'"
-            @click="copyReverseResult"
-          >
-            {{ copied ? '已复制' : '复制结果' }}
-          </el-button>
         </div>
-        <pre>{{ reverseResultText }}</pre>
+        <ReverseResultView
+          :result="reverseResult"
+          @apply-candidate="emit('apply-candidate', $event)"
+        />
       </div>
     </div>
 

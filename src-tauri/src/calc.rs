@@ -64,7 +64,7 @@ pub fn validate_input_counts(stats: &NoteStats, input: &ScoreInput) -> Result<()
 
     if judgement.non_slide_sum() > stats.non_slide_total() {
         return Err(format!(
-            "非Slide判定总和 {} 超过上限 {}。",
+            "非Slide判定总和 {} 超过上限 {}",
             judgement.non_slide_sum(),
             stats.non_slide_total()
         ));
@@ -72,7 +72,7 @@ pub fn validate_input_counts(stats: &NoteStats, input: &ScoreInput) -> Result<()
 
     if judgement.slide_sum() > stats.slide {
         return Err(format!(
-            "Slide判定总和 {} 超过上限 {}。",
+            "Slide判定总和 {} 超过上限 {}",
             judgement.slide_sum(),
             stats.slide
         ));

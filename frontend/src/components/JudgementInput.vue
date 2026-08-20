@@ -48,7 +48,7 @@ onUnmounted(() => window.removeEventListener("resize", onResize));
 <template>
   <section class="panel">
     <h2>2. 输入判定</h2>
-    <p class="muted">允许输入总和小于上限，未填部分可理解为未得分项。</p>
+    <p class="muted">允许输入总和小于上限，未填部分可理解为未得分项</p>
 
     <div class="grid grid-three">
       <label class="field">
