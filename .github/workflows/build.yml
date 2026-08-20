@@ -155,6 +155,11 @@ jobs:
       - name: Tauri Android init
         run: cargo tauri android init
 
+      # 编译 Rust .so + 前端 + 由 tauri 内部 gradle 打包（此阶段无签名，无妨）
+      - name: Build Android (tauri)
+        run: cargo tauri android build
+
+      # ---- build 之后修复生成文件（对齐本地 build_android.sh，避免被 tauri 重新生成覆盖）----
       - name: Fix generated files
         run: |
           # Fix Logger.kt — BuildConfig.DEBUG is broken with custom package names
@@ -168,9 +173,34 @@ jobs:
           echo "build.gradle.kts package name ensured"
         shell: bash
 
-      # 编译 Rust .so + 前端 + 由 tauri 内部 gradle 打包（此阶段签名可能不生效，无妨）
-      - name: Build Android (tauri)
-        run: cargo tauri android build
+      # tauri 模板不含 signingConfigs（tauri-cli 2.10+），注入签名配置
+      - name: Inject Android signingConfigs
+        run: python3 .github/android-patch/apply_android_signing.py src-tauri/gen/android/app/build.gradle.kts
+
+      # tauri android build 可能把自定义图标重置为默认，重新从 app-icon.png 生成
+      - name: Generate Android icons
+        run: |
+          sudo apt-get install -y ffmpeg >/dev/null 2>&1 || true
+          ICON_SRC="src-tauri/icons/app-icon.png"
+          RES_DIR="src-tauri/gen/android/app/src/main/res"
+          if [ -f "$ICON_SRC" ]; then
+            rm -f "$RES_DIR/drawable/ic_launcher_background.xml"
+            rm -f "$RES_DIR/drawable-v24/ic_launcher_foreground.xml"
+            for size in 48 72 96 144 192; do
+              case $size in
+                48)  dir="mipmap-mdpi" ;;
+                72)  dir="mipmap-hdpi" ;;
+                96)  dir="mipmap-xhdpi" ;;
+                144) dir="mipmap-xxhdpi" ;;
+                192) dir="mipmap-xxxhdpi" ;;
+              esac
+              ffmpeg -y -i "$ICON_SRC" -vf "scale=${size}:${size}" "$RES_DIR/$dir/ic_launcher.png" 2>/dev/null
+              cp "$RES_DIR/$dir/ic_launcher.png" "$RES_DIR/$dir/ic_launcher_round.png"
+              cp "$RES_DIR/$dir/ic_launcher.png" "$RES_DIR/$dir/ic_launcher_foreground.png"
+            done
+            echo "Android 图标已生成"
+          fi
+        shell: bash
 
       # 签名配置放在 build 之后、gradlew 打包之前，确保不被 tauri 重新生成覆盖
       - name: Configure Android signing
