@@ -13,7 +13,7 @@
 
 ---
 
-一个基于 Tauri 2、Vue 3 和 Rust 的 Rotaeno 分数计算器，支持 PC 和 Android
+一个基于 Tauri 2、Vue 3 和 Rust 的 Rotaeno 分数计算器，支持 PC、Android 和 iOS。
 
 ## 功能
 
@@ -23,28 +23,40 @@
 - 目标分数反算（输入目标分数 → 可能的判定分布）
   - 前三方案 / 展示全部 两种模式
   - 可筛选允许判定：Perfect+ / Perfect / Good / Miss/未判定
+  - 反算时显示计算进度
+  - 同一分数下 Miss 的多种分配可能，全部列出供参考
+- 反算结果一键复制（电脑、手机都支持），也可直接选中文本复制
 - 计算历史记录（本地存储，可展开查看详情）
-- 谱面数据在线更新（首次启动自动下载，后续检测版本更新）
+- 谱面数据自动更新（联网时自动检测，无需手动操作）
 
-## 数据
+## 支持平台
 
-App 启动时自动从服务器下载谱面数据并**逐字节比对本地缓存**，内容不同才更新。
-服务器只维护一个固定文件，内置数据仅作为全新安装且无法联网时的离线兜底，**数据更新无需重新构建/发布 App**。
+| 平台 | 架构 |
+|------|------|
+| Windows | x64 / x86 / ARM64 |
+| Android | ARM64 |
+| iOS | 通用 |
+| macOS | Apple Silicon |
+| Linux | x64 |
 
-```text
-https://rth.srv-selena.lookatthesky.cn/Rotaeno/data/
-└── all_song_note_stats.json   ← 唯一需要维护的文件
-```
+## 下载
 
-### 更新数据的步骤（服务器端）
+从 [GitHub Actions](https://github.com/RaTaiHok/rotaeno_score_calculator/actions) 的构建产物中下载：
 
-1. 用新的 `all_song_note_stats.json` **覆盖上传**到服务器
-2. 完成 —— App 下次启动会自动检测并下载
+- `Rotaeno_Score_Calc-All.zip` — 全平台汇总包
+- `Rotaeno_Score_Calc-Windows64x.zip` / `-Windows32x.zip` / `-Windowsarm64.zip`
+- `Rotaeno_Score_Calc-Android.zip`
+- `Rotaeno_Score_Calc-iOS.zip`
+- `Rotaeno_Score_Calc-Mac.zip`
+- `Rotaeno_Score_Calc-Linux.zip`
 
-> 若服务器支持 ETag（nginx / 对象存储 / CDN 通常支持），App 会自动带上 `If-None-Match` 头，
-> 数据未变化时命中 304，几乎不消耗流量。
+> 从 zip 中选择对应自己设备的文件进行安装。
 
-> 旧方案（`latest_version.txt` + `all_song_note_stats_{version}.json`）已废弃，可删除。
+## 使用说明
+
+- **Windows / macOS / Linux**：解压后直接运行
+- **Android**：安装 APK 即可（新版可直接覆盖安装旧版）
+- **iOS**：无签名 IPA，需自行使用 AltStore / SideStore / TrollStore 等工具签名安装
 
 ## License
 
