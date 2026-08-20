@@ -194,6 +194,30 @@ h3 {
   color: #51607a;
 }
 
+.field-label small {
+  color: #8a97ae;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* 紧凑判定输入：小标签 + 无按钮窄输入框 */
+.judge-grid {
+  gap: 8px;
+}
+
+.judge-field {
+  gap: 4px;
+}
+
+.judge-field .field-label {
+  font-size: 12px;
+  color: #8a97ae;
+}
+
+.judge-field .el-input-number {
+  width: 100%;
+}
+
 .full-width {
   width: 100%;
 }

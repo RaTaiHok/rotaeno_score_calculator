@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import ReverseResultView from "./ReverseResultView.vue";
+import CalcResultView from "./CalcResultView.vue";
 
 const TYPE_LABELS = {
   calc: "正算",
@@ -104,8 +105,12 @@ function detailText(entry) {
             </div>
 
             <div v-if="expandedId === entry.id" class="history-entry__detail">
+              <CalcResultView
+                v-if="entry.calcResultData"
+                :result="entry.calcResultData"
+              />
               <ReverseResultView
-                v-if="entry.reverseResultData"
+                v-else-if="entry.reverseResultData"
                 :result="entry.reverseResultData"
                 :show-apply="false"
               />

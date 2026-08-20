@@ -1,10 +1,15 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import ReverseResultView from "./ReverseResultView.vue";
+import CalcResultView from "./CalcResultView.vue";
 
 const targetScore = defineModel("targetScore", { default: 1_000_000 });
 
 const props = defineProps({
+  calcResult: {
+    type: Object,
+    default: null
+  },
   calcResultText: {
     type: String,
     default: "-"
@@ -49,9 +54,11 @@ onUnmounted(() => window.removeEventListener("resize", onResize));
       <div class="calc-row">
         <el-button type="primary" :size="componentSize" :disabled="!canOperate" @click="emit('calculate')">计算分数</el-button>
       </div>
-      <div v-if="calcResultText !== '-'" class="result">
-        <h3>计算结果</h3>
-        <pre>{{ calcResultText }}</pre>
+      <div v-if="calcResult" class="result">
+        <div class="result-header">
+          <h3>计算结果</h3>
+        </div>
+        <CalcResultView :result="calcResult" />
       </div>
     </div>
 

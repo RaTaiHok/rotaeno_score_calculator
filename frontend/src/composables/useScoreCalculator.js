@@ -40,6 +40,7 @@ export function useScoreCalculator(onResult = null) {
 
   const errorMessage = ref("");
   const calcResultText = ref(EMPTY_RESULT);
+  const calcResult = ref(null);
   const reverseResultText = ref(EMPTY_RESULT);
   const reverseResult = ref(null);
   const reverseLoading = ref(false);
@@ -66,7 +67,7 @@ export function useScoreCalculator(onResult = null) {
       toInt(judgement.non_slide_good) +
       toInt(judgement.non_slide_miss)
   );
-  const slideSum = computed(() => toInt(judgement.slide_hit) + toInt(judgement.slide_miss));
+  const slideSum = computed(() => toInt(judgement.slide_miss));
   const canOperate = computed(() => !!selectedChart.value);
 
   const filteredSongs = computed(() => {
@@ -159,6 +160,7 @@ export function useScoreCalculator(onResult = null) {
       clearError();
       const result = await requestCalculateScore(createScoreInput());
       calcResultText.value = formatCalcResult(result);
+      calcResult.value = result;
       saveEntry("calc", calcResultText.value);
     } catch (error) {
       setError(error);
@@ -271,6 +273,7 @@ export function useScoreCalculator(onResult = null) {
       difficulty: selectedDifficulty.value,
       targetScore: type !== "calc" ? Math.max(0, toInt(targetScore.value)) : null,
       calcResult: type === "calc" ? resultText : null,
+      calcResultData: type === "calc" ? calcResult.value : null,
       reverseResult: type !== "calc" ? resultText : null,
       reverseResultData: type !== "calc" ? buildCompactResult(reverseResult.value) : null
     });
@@ -308,7 +311,8 @@ export function useScoreCalculator(onResult = null) {
       non_slide_perfect: toInt(judgement.non_slide_perfect),
       non_slide_good: toInt(judgement.non_slide_good),
       non_slide_miss: toInt(judgement.non_slide_miss),
-      slide_hit: toInt(judgement.slide_hit),
+      // Slide 只有 Hit/Miss：Hit 自动补全（上限 − Miss）
+      slide_hit: Math.max(0, slideLimit.value - toInt(judgement.slide_miss)),
       slide_miss: toInt(judgement.slide_miss)
     };
   }
@@ -358,6 +362,7 @@ export function useScoreCalculator(onResult = null) {
 
   function clearResults() {
     calcResultText.value = EMPTY_RESULT;
+    calcResult.value = null;
     reverseResultText.value = EMPTY_RESULT;
     reverseResult.value = null;
   }
@@ -388,6 +393,7 @@ export function useScoreCalculator(onResult = null) {
   }
 
   return {
+    calcResult,
     calcResultText,
     calculateScore,
     canOperate,

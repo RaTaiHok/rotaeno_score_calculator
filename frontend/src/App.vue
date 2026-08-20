@@ -92,6 +92,7 @@ onMounted(initData);
 
 const {
   applyJudgement,
+  calcResult,
   calcResultText,
   calculateScore,
   canOperate,
@@ -162,6 +163,7 @@ function handleClear() {
 
     <ScoreActions
       v-model:target-score="targetScore"
+      :calc-result="calcResult"
       :calc-result-text="calcResultText"
       :can-operate="canOperate"
       :error-message="errorMessage"
