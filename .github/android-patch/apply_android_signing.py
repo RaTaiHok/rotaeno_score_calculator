@@ -3,7 +3,7 @@
 
 tauri-cli 2.10+ 的模板 build.gradle.kts 不包含 signingConfigs，
 导致即使有 keystore.properties 也产出 unsigned APK。
-本脚本注入：keystoreProperties 加载 + signingConfigs("release") + release 引用。
+本脚本注入：import Properties（缺失时）+ keystoreProperties 声明 + signingConfigs + release 引用。
 用正则匹配任意缩进，兼容不同 tauri-cli 版本生成的模板。
 用法: python3 apply_android_signing.py <path/to/app/build.gradle.kts>
 """
@@ -16,20 +16,29 @@ with open(path, encoding="utf-8") as f:
 
 changed = False
 
-# 1. 顶部插入 keystoreProperties 加载（用全限定名，避免 import 位置限制）
-if "keystoreProperties" not in content:
-    header = (
-        'val keystoreProperties = java.util.Properties()\n'
+# 1. 确保 import java.util.Properties（缺失时补到文件顶部 import 区）
+if "import java.util.Properties" not in content:
+    content = "import java.util.Properties\n\n" + content
+    changed = True
+
+# 2. android { 前插入 keystoreProperties 声明（顶层，使用 import 提供的 Properties）
+if "val keystoreProperties" not in content:
+    m = re.search(r"^android\s*\{", content, re.MULTILINE)
+    if not m:
+        print("ERROR: anchor 'android {' not found")
+        sys.exit(1)
+    decl = (
+        'val keystoreProperties = Properties()\n'
         'val keystorePropertiesFile = file("keystore.properties")\n'
         'if (keystorePropertiesFile.exists()) {\n'
         '    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }\n'
         '}\n'
         '\n'
     )
-    content = header + content
+    content = content[: m.start()] + decl + content[m.start():]
     changed = True
 
-# 2. buildTypes 前插入 signingConfigs（保留 buildTypes 的缩进）
+# 3. buildTypes 前插入 signingConfigs（保留 buildTypes 的缩进）
 if "signingConfigs" not in content:
     m = re.search(r"^(\s*)buildTypes\s*\{", content, re.MULTILINE)
     if not m:
@@ -55,7 +64,7 @@ if "signingConfigs" not in content:
     content = content[: m.start()] + signing + content[m.start():]
     changed = True
 
-# 3. release buildType 内加 signingConfig 引用
+# 4. release buildType 内加 signingConfig 引用
 if "signingConfig = signingConfigs.getByName" not in content:
     m = re.search(r"^(\s*)(?:release|getByName\(\"release\"\))\s*\{", content, re.MULTILINE)
     if not m:
