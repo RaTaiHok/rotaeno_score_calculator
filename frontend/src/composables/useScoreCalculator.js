@@ -198,6 +198,9 @@ export function useScoreCalculator(onResult = null) {
             reverseProgress.value = Math.max(0, Math.min(100, Number(msg?.percent ?? 0)));
           }
         );
+        // 计算已真正完成：强制显示 100% 并短暂停留，避免进度消息竞态导致看不到 100%
+        reverseProgress.value = 100;
+        await new Promise((resolve) => setTimeout(resolve, 250));
         cacheFullReverseResult(cacheKey, full);
       }
 

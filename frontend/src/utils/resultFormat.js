@@ -48,7 +48,12 @@ export function formatReverseResult(result) {
 
     if (hasMultipleVariants) {
       // 有歧义：G/SlideHit/Miss 分配不确定，不显示固定值，直接列出所有可能
-      lines.push(`  - Good/Miss 分配（${formatInt(variants.length)} 种可能）:`);
+      const total = candidate.miss_variant_total > variants.length ? candidate.miss_variant_total : variants.length;
+      lines.push(
+        total > variants.length
+          ? `  - Good/Miss 分配（前 ${formatInt(variants.length)} 种 / 共 ${formatInt(total)} 种可能，仅列 Miss 较少的）:`
+          : `  - Good/Miss 分配（${formatInt(variants.length)} 种可能）:`
+      );
       lines.push(...variantLines);
     } else {
       // 唯一分配：直接显示固定判定分布

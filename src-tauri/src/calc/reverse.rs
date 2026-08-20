@@ -7,6 +7,10 @@ use crate::model::{
 };
 
 const DEFAULT_REVERSE_SOLUTIONS: usize = 3;
+/// 每个反算方案最多展示的 Miss 分配变体数。
+/// 同一分数下 Good/SlideHit 可拆分的变体可能成百上千（尤其低分数 + 大量 Slide），
+/// 全部列出会导致结果爆炸（序列化慢、前端渲染卡），只保留 Miss 最少的几种即可。
+const MAX_MISS_VARIANTS: usize = 12;
 
 pub fn from_target(
     stats: &NoteStats,
@@ -85,20 +89,24 @@ pub fn from_target(
         }
 
         done_iters += (max_h + 1) as u64;
-        let percent = ((done_iters * 100) / total_iters.max(1)) as u8;
+        // 封顶 99%：最后的 100% 在 build_result（排序/序列化）完成后才发，
+        // 避免“进度已 100% 但结果迟迟不出现”的错觉
+        let percent = (((done_iters * 100) / total_iters.max(1)) as u8).min(99);
         on_progress(percent);
     }
 
-    if exact.has_candidates() {
+    let result = if exact.has_candidates() {
         let exact_count = exact.count;
-        return Ok(build_result(stats, input, exact, exact_count, include_all));
-    }
+        Ok(build_result(stats, input, exact, exact_count, include_all))
+    } else if nearest.has_candidates() {
+        Ok(build_result(stats, input, nearest, 0, include_all))
+    } else {
+        Err("未找到符合当前判定筛选条件的可行分布，请放宽筛选后重试。".to_string())
+    };
 
-    if nearest.has_candidates() {
-        return Ok(build_result(stats, input, nearest, 0, include_all));
-    }
-
-    Err("未找到符合当前判定筛选条件的可行分布，请放宽筛选后重试。".to_string())
+    // 100% 与真正完成同步：build_result（排序、构造输出、序列化）之后才上报
+    on_progress(100);
+    result
 }
 
 fn build_result(
@@ -303,6 +311,7 @@ impl TupleEval {
                 non_slide_unplayed,
             },
             miss_variants: Vec::new(),
+            miss_variant_total: 0,
             score_factor: self.score_factor,
             raw_score: self.raw_score,
             matched_score: self.matched_score,
@@ -315,8 +324,10 @@ impl TupleEval {
 #[derive(Debug, Clone)]
 struct ReverseCandidate {
     judgement: JudgementBreakdown,
-    /// 该方案下所有可能的 Miss 分配变体（Good/SlideHit 拆分 → 对应的 Miss 分布）
+    /// 该方案下展示的 Miss 分配变体（最多 MAX_MISS_VARIANTS 个）
     miss_variants: Vec<MissVariant>,
+    /// 该方案实际的总 Miss 分配变体数
+    miss_variant_total: usize,
     score_factor: f64,
     raw_score: f64,
     matched_score: u32,
@@ -334,6 +345,7 @@ impl ReverseCandidate {
             raw_score: self.raw_score,
             judgement: self.judgement.clone(),
             miss_variants: self.miss_variants.clone(),
+            miss_variant_total: self.miss_variant_total,
         }
     }
 }
@@ -351,6 +363,7 @@ fn candidates_from_eval(
         eval.remaining_non_slide + eval.non_slide_perfect_plus + eval.non_slide_perfect;
 
     let mut miss_variants: Vec<MissVariant> = Vec::new();
+    let mut miss_variant_total: usize = 0;
     let mut primary: Option<ReverseCandidate> = None;
 
     for g in eval.g_min..=eval.g_max {
@@ -373,18 +386,23 @@ fn candidates_from_eval(
             continue;
         }
 
+        miss_variant_total += 1;
         if primary.is_none() {
             primary = Some(candidate.clone());
         }
-        miss_variants.push(MissVariant {
-            non_slide_good: candidate.judgement.non_slide_good,
-            non_slide_miss: candidate.judgement.non_slide_miss,
-            slide_hit: candidate.judgement.slide_hit,
-            slide_miss: candidate.judgement.slide_miss,
-        });
+        // 只保留 Miss 最少的变体（g 从小到大 = slide_miss 递增），避免结果爆炸
+        if miss_variants.len() < MAX_MISS_VARIANTS {
+            miss_variants.push(MissVariant {
+                non_slide_good: candidate.judgement.non_slide_good,
+                non_slide_miss: candidate.judgement.non_slide_miss,
+                slide_hit: candidate.judgement.slide_hit,
+                slide_miss: candidate.judgement.slide_miss,
+            });
+        }
     }
 
     let mut candidate = primary?;
+    candidate.miss_variant_total = miss_variant_total;
     candidate.miss_variants = miss_variants;
     Some(candidate)
 }

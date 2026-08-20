@@ -220,8 +220,10 @@ pub struct ReverseCandidateResult {
     pub raw_score: f64,
     /// 主判定分布（取 Good 最少 / Slide Hit 最多的代表变体）
     pub judgement: JudgementBreakdown,
-    /// 分情况：该方案所有可能的 Miss 分配变体
+    /// 分情况：该方案的部分 Miss 分配变体（最多 MAX_MISS_VARIANTS 个，取 Miss 少的）
     pub miss_variants: Vec<MissVariant>,
+    /// 该方案实际的总 Miss 分配变体数（可能远大于 miss_variants.len()）
+    pub miss_variant_total: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
